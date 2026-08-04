@@ -126,20 +126,35 @@ export async function fetchMakerWorldProduct(url: string, availableCategories: C
 
   let json: any = null;
 
-  // Try direct fetch first
+  // 1. Try Vercel Serverless Function first (/api/makerworld)
   try {
-    const res = await fetch(targetApiUrl, {
-      headers: { 'Accept': 'application/json' }
-    });
+    const res = await fetch(`/api/makerworld?id=${modelId}`);
     if (res.ok) {
-      json = await res.json();
+      const data = await res.json();
+      if (data && (data.title || data.id)) {
+        json = data;
+      }
     }
-  } catch (err) {
-    // continue to proxy
+  } catch (e) {
+    // serverless proxy unavailable (e.g. running locally without Vercel CLI)
   }
 
-  // If direct fetch fails (e.g. CORS), try via CORS proxies
-  if (!json || !json.title) {
+  // 2. Try direct fetch if serverless proxy didn't return data
+  if (!json || (!json.title && !json.id)) {
+    try {
+      const res = await fetch(targetApiUrl, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        json = await res.json();
+      }
+    } catch (err) {
+      // continue to public CORS proxies
+    }
+  }
+
+  // 3. Try public CORS proxies as last resort
+  if (!json || (!json.title && !json.id)) {
     const proxies = [
       `https://corsproxy.io/?${encodeURIComponent(targetApiUrl)}`,
       `https://api.allorigins.win/raw?url=${encodeURIComponent(targetApiUrl)}`
