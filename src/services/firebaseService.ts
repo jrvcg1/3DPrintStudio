@@ -84,10 +84,10 @@ initializeDataStorage();
 export const getProducts = async (): Promise<Product[]> => {
   if (isFirebaseConfigured && db) {
     try {
-      const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(collection(db, 'products'));
       if (!snapshot.empty) {
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        return prods.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
       }
     } catch (error) {
       console.warn('Firebase query failed, using local storage fallback:', error);
