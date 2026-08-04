@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   Plus, Edit, Trash2, ShieldCheck, Box, RefreshCw, Download, Settings,
-  Eye, EyeOff, Save, CheckCircle2, AlertTriangle, Layers, MessageSquare, Sparkles, Image as ImageIcon, Phone
+  Eye, EyeOff, Save, CheckCircle2, AlertTriangle, Layers, MessageSquare,
+  Sparkles, Image as ImageIcon, Phone, Users, Mail, Calendar, Clock, UserX, Crown, LogOut
 } from 'lucide-react';
 import { ADMIN_PASSWORD } from '../../config/admin';
 import { Product, ProductColor, getProductSku } from '../../types/product';
 import { Category } from '../../types/category';
 import { BusinessConfig } from '../../types/config';
 import { Order } from '../../types/order';
+import { AppUser } from '../../types/user';
+import { getUsers, deleteUserProfile, updateUserRole } from '../../services/userService';
 import { useToast } from '../../context/ToastContext';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 import { MakerWorldImportModal } from './MakerWorldImportModal';
 
 interface AdminPanelProps {
@@ -35,13 +39,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onResetDemoData
 }) => {
   const { showToast } = useToast();
+  const { user, appUser, loading: authLoading, authError, isAdmin, signInWithGoogle, logout } = useAdminAuth();
 
-  // ---- Admin authentication ----
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-
-  // Other component states (must be declared at top level to satisfy Rules of Hooks)
-  const [activeTab, setActiveTab] = useState<'products' | 'config' | 'categories' | 'orders'>('products');
+  // Component states
+  const [activeTab, setActiveTab] = useState<'products' | 'config' | 'categories' | 'orders' | 'users'>('products');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isMakerWorldOpen, setIsMakerWorldOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
@@ -49,44 +50,96 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [newCatName, setNewCatName] = useState('');
   const [newCatDescription, setNewCatDescription] = useState('');
 
+  // Users management state
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  useEffect(() => { setConfigForm(config); }, [config]);
+
+  // Load users when tab is selected
   useEffect(() => {
-    setConfigForm(config);
-  }, [config]);
-
-  const handleAuthSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordInput === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      showToast('Acceso concedido', 'success');
-    } else {
-      showToast('Contraseña incorrecta', 'error');
+    if (activeTab === 'users' && isAdmin) {
+      setUsersLoading(true);
+      getUsers().then(data => {
+        setUsers(data);
+        setUsersLoading(false);
+      }).catch(() => setUsersLoading(false));
     }
-    setPasswordInput('');
-  };
+  }, [activeTab, isAdmin]);
 
-  if (!isAuthenticated) {
+  // --- Auth loading screen ---
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <form onSubmit={handleAuthSubmit} className="glass-card p-8 rounded-3xl border border-white/20 max-w-md w-full shadow-2xl">
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center mb-4 mx-auto">
-            <ShieldCheck className="w-6 h-6 text-purple-400" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-purple-500/20 border-t-purple-400 rounded-full animate-spin" />
+          <p className="text-xs text-slate-400">Verificando acceso...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Not logged in: show Google Sign-In ---
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="glass-card p-8 rounded-3xl border border-white/20 max-w-md w-full shadow-2xl space-y-6">
+          <div className="text-center">
+            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck className="w-7 h-7 text-purple-400" />
+            </div>
+            <h2 className="text-xl font-black text-white">Panel de Administración</h2>
+            <p className="text-xs text-slate-400 mt-1.5">
+              Acceso restringido. Inicia sesión con tu cuenta de administrador.
+            </p>
           </div>
-          <h2 className="text-xl font-black text-white mb-2 text-center">Acceso Administrador</h2>
-          <p className="text-xs text-slate-400 text-center mb-6">Introduce la clave de acceso para gestionar la tienda.</p>
-          <input
-            type="password"
-            value={passwordInput}
-            onChange={e => setPasswordInput(e.target.value)}
-            placeholder="Contraseña de administrador"
-            className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white mb-4 focus:outline-none focus:border-cyan-400 text-sm"
-          />
+
           <button
-            type="submit"
-            className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+            onClick={signInWithGoogle}
+            className="w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-sm transition-all active:scale-95 shadow-xl"
           >
-            Entrar al Panel
+            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            <span>Continuar con Google</span>
           </button>
-        </form>
+
+          {authError && (
+            <p className="text-xs text-red-400 text-center">{authError}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- Logged in but NOT admin ---
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="glass-card p-8 rounded-3xl border border-red-500/20 max-w-md w-full shadow-2xl space-y-5 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-7 h-7 text-red-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white">Acceso denegado</h2>
+            <p className="text-xs text-slate-400 mt-2">
+              Tu cuenta <span className="text-white font-bold">{appUser?.email || user.email}</span> no tiene permisos de administrador.
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Contacta con el propietario del sistema para que te asigne el rol de administrador.
+            </p>
+          </div>
+          <button
+            onClick={logout}
+            className="flex items-center justify-center gap-2 mx-auto px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:text-white text-sm font-bold transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar sesión
+          </button>
+        </div>
       </div>
     );
   }
@@ -241,6 +294,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <RefreshCw className="w-4 h-4 text-rose-400" />
             <span>Restaurar Muestra</span>
           </button>
+
+          {/* Admin user info + logout */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20">
+            {appUser?.photoURL && (
+              <img src={appUser.photoURL} alt={appUser.displayName} className="w-6 h-6 rounded-full object-cover ring-1 ring-purple-400/50" />
+            )}
+            <div className="hidden sm:block">
+              <p className="text-[10px] font-black text-white leading-none">{appUser?.displayName}</p>
+              <p className="text-[10px] text-purple-300 flex items-center gap-0.5"><Crown className="w-2.5 h-2.5" /> Admin</p>
+            </div>
+            <button
+              onClick={logout}
+              title="Cerrar sesión"
+              className="ml-1 p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-red-400 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -280,6 +351,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         >
           <Layers className="w-4 h-4" />
           <span>Categorías ({categories.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+            activeTab === 'users'
+              ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25'
+              : 'bg-white/5 text-slate-400 hover:text-white'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Usuarios {users.length > 0 ? `(${users.length})` : ''}</span>
         </button>
       </div>
 
@@ -657,6 +740,140 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+
+      {/* TAB 5: USERS MANAGER */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-violet-400" />
+                Usuarios Registrados
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Clientes que han iniciado sesión con Google en la app móvil.
+              </p>
+            </div>
+            <button
+              onClick={() => { setUsersLoading(true); getUsers().then(d => { setUsers(d); setUsersLoading(false); }); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 text-slate-300 hover:text-white text-xs font-bold transition-all border border-white/10"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${usersLoading ? 'animate-spin' : ''}`} />
+              <span>Actualizar</span>
+            </button>
+          </div>
+
+          {usersLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="w-8 h-8 border-4 border-violet-500/20 border-t-violet-400 rounded-full animate-spin" />
+              <p className="text-xs text-slate-400">Cargando usuarios...</p>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="glass-card rounded-3xl p-12 text-center border border-white/10 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mx-auto">
+                <Users className="w-7 h-7 text-violet-400" />
+              </div>
+              <p className="text-sm font-bold text-slate-300">Aún no hay usuarios registrados</p>
+              <p className="text-xs text-slate-500">
+                Los usuarios aparecen aquí automáticamente cuando inician sesión con Google en la app móvil.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {users.map(u => (
+                <div
+                  key={u.uid}
+                  className="glass-card rounded-3xl p-5 border border-white/10 space-y-4 hover:border-violet-500/30 transition-all"
+                >
+                  {/* Header: Avatar + Name + Provider */}
+                  <div className="flex items-center gap-3">
+                    {u.photoURL ? (
+                      <img
+                        src={u.photoURL}
+                        alt={u.displayName}
+                        className="w-12 h-12 rounded-2xl object-cover ring-2 ring-violet-500/30"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-500 to-indigo-500 flex items-center justify-center text-lg font-black text-white">
+                        {u.displayName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white text-sm truncate">{u.displayName || 'Sin nombre'}</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">
+                          Google
+                        </span>
+                        {u.role === 'admin' && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-0.5">
+                            <Crown className="w-2.5 h-2.5" /> Admin
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* User details */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Mail className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <span className="truncate">{u.email || 'Sin email'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <span>Registrado: {u.createdAt ? new Date(u.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Clock className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <span>Último acceso: {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</span>
+                    </div>
+                  </div>
+
+                  {/* Role toggle + Delete buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        const newRole = u.role === 'admin' ? 'user' : 'admin';
+                        const msg = newRole === 'admin'
+                          ? `¿Hacer administrador a ${u.displayName}? Tendrá acceso al panel de control.`
+                          : `¿Quitar permisos de administrador a ${u.displayName}?`;
+                        if (!confirm(msg)) return;
+                        await updateUserRole(u.uid, newRole);
+                        setUsers(prev => prev.map(x => x.uid === u.uid ? { ...x, role: newRole } : x));
+                        showToast(
+                          newRole === 'admin' ? `${u.displayName} ahora es administrador` : `Permisos retirados a ${u.displayName}`,
+                          'success'
+                        );
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                        u.role === 'admin'
+                          ? 'bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30'
+                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-purple-300 hover:border-purple-500/30'
+                      }`}
+                    >
+                      <Crown className="w-3.5 h-3.5" />
+                      <span>{u.role === 'admin' ? 'Quitar Admin' : 'Hacer Admin'}</span>
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`¿Eliminar el perfil de ${u.displayName}? Esta acción no elimina su cuenta de Google.`)) return;
+                        await deleteUserProfile(u.uid);
+                        setUsers(prev => prev.filter(x => x.uid !== u.uid));
+                        showToast('Perfil de usuario eliminado', 'success');
+                      }}
+                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-bold transition-all"
+                    >
+                      <UserX className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
