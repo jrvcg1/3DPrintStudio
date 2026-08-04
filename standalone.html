@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Print Studio | Impresión 3D Personalizada</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#0A0D14',
+              blue: '#3B82F6',
+              cyan: '#06B6D4',
+              purple: '#8B5CF6',
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      background-color: #0A0D14;
+      color: #F3F4F6;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-header {
+      background: rgba(10, 13, 20, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .text-gradient {
+      background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 50%, #8B5CF6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
+</head>
+<body class="min-h-screen selection:bg-cyan-500 selection:text-[#0A0D14]">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Initial Mock Data
+    const INITIAL_CONFIG = {
+      storeName: '3D Print Studio',
+      whatsappNumber: '34600000000',
+      announcementBanner: '🚀 Impresiones 3D personalizadas en 24-48h con PLA 100% Ecológico',
+    };
+
+    const INITIAL_CATEGORIES = [
+      { id: 'cat-llaveros', name: 'Llaveros', slug: 'llaveros', description: 'Llaveros personalizados, nombres y logos 3D' },
+      { id: 'cat-organizadores', name: 'Organizadores', slug: 'organizadores', description: 'Soportes de escritorio y mandos' },
+      { id: 'cat-figuras', name: 'Figuras', slug: 'figuras', description: 'Dragones articulados y coleccionables' },
+      { id: 'cat-decoracion', name: 'Decoración', slug: 'decoracion', description: 'Maceteros Voronoi y piezas de diseño' },
+      { id: 'cat-accesorios', name: 'Accesorios', slug: 'accesorios', description: 'Soportes ajustables para móvil/tablet' },
+      { id: 'cat-juegos', name: 'Juegos', slug: 'juegos', description: 'Puzzles 3D y fidget toys' },
+    ];
+
+    const INITIAL_PRODUCTS = [
+      {
+        id: 'prod-1',
+        name: 'Dragón Articulado Cyber',
+        slug: 'dragon-articulado-cyber',
+        description: 'Dragón articulado sin ensamblaje con movimiento ultra suave.',
+        price: 14.99,
+        category: 'figuras',
+        images: ['https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80'],
+        colors: [
+          { name: 'Azul Eléctrico', hex: '#3B82F6' },
+          { name: 'Cian Neón', hex: '#06B6D4' },
+          { name: 'Morado Galaxia', hex: '#8B5CF6' }
+        ],
+        printTime: '5 horas',
+        material: 'PLA Premium Silk',
+        isCustomizable: true,
+        isFeatured: true,
+        isActive: true,
+        stock: 12
+      },
+      {
+        id: 'prod-2',
+        name: 'Soporte Hexagonal para Mandos (PS5 / Xbox)',
+        slug: 'soporte-hexagonal-mandos',
+        description: 'Soporte de diseño futurista con patrón de panal para mandos.',
+        price: 18.50,
+        category: 'organizadores',
+        images: ['https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?auto=format&fit=crop&w=800&q=80'],
+        colors: [
+          { name: 'Negro Obsidian', hex: '#0A0D14' },
+          { name: 'Azul Cyber', hex: '#2563EB' }
+        ],
+        printTime: '7 horas',
+        material: 'PETG Alta Resistencia',
+        isCustomizable: false,
+        isFeatured: true,
+        isActive: true,
+        stock: 8
+      },
+      {
+        id: 'prod-3',
+        name: 'Llavero Nombre 3D Personalizado',
+        slug: 'llavero-nombre-3d',
+        description: 'Tu nombre o palabra favorita impresa en 3D en 2 colores.',
+        price: 4.99,
+        category: 'llaveros',
+        images: ['https://images.unsplash.com/photo-1589782182703-2aaa69037b5b?auto=format&fit=crop&w=800&q=80'],
+        colors: [
+          { name: 'Azul & Blanco', hex: '#3B82F6' },
+          { name: 'Cian & Negro', hex: '#06B6D4' }
+        ],
+        printTime: '45 mins',
+        material: 'PLA Eco-Friendly',
+        isCustomizable: true,
+        isFeatured: true,
+        isActive: true,
+        stock: 50
+      },
+      {
+        id: 'prod-4',
+        name: 'Macetero Geométrico Voronoi',
+        slug: 'macetero-voronoi',
+        description: 'Maceta decorativa con patrón orgánico Voronoi y drenaje.',
+        price: 16.00,
+        category: 'decoracion',
+        images: ['https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=800&q=80'],
+        colors: [
+          { name: 'Blanco Marmolado', hex: '#F3F4F6' },
+          { name: 'Verde Menta', hex: '#10B981' }
+        ],
+        printTime: '6 horas',
+        material: 'PLA Reciclado',
+        isCustomizable: false,
+        isFeatured: false,
+        isActive: true,
+        stock: 15
+      }
+    ];
+
+    function App() {
+      const [tab, setTab] = useState('home');
+      const [products, setProducts] = useState(() => {
+        const saved = localStorage.getItem('3d_studio_prods');
+        return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      });
+      const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+      const [config, setConfig] = useState(INITIAL_CONFIG);
+      const [selectedProduct, setSelectedProduct] = useState(null);
+      const [selectedCategory, setSelectedCategory] = useState('');
+      const [searchQuery, setSearchQuery] = useState('');
+
+      useEffect(() => {
+        localStorage.setItem('3d_studio_prods', JSON.stringify(products));
+      }, [products]);
+
+      // WhatsApp URL Generator
+      const getWhatsAppUrl = (prod, color, notes) => {
+        const num = config.whatsappNumber.replace(/[^0-9]/g, '');
+        const msg = `¡Hola! 👋 Vi tu tienda *3D Print Studio* y quiero pedir:
+📌 *Producto:* ${prod.name}
+💰 *Precio:* ${prod.price.toFixed(2)}€
+🎨 *Color:* ${color || 'Estándar'}
+${notes ? '✏️ *Notas:* ' + notes : ''}
+¿Cómo procedemos con el envío? ¡Gracias!`;
+        return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+      };
+
+      const filteredProducts = useMemo(() => {
+        return products.filter(p => {
+          if (!p.isActive) return false;
+          if (selectedCategory && p.category !== selectedCategory) return false;
+          if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            return p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+          }
+          return true;
+        });
+      }, [products, selectedCategory, searchQuery]);
+
+      return (
+        <div className="min-h-screen flex flex-col justify-between">
+          
+          {/* Announcement Bar */}
+          <div className="bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 text-white text-xs font-semibold py-1.5 px-4 text-center">
+            {config.announcementBanner}
+          </div>
+
+          {/* Header */}
+          <header className="sticky top-0 z-40 w-full glass-header">
+            <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+              <div onClick={() => setTab('home')} className="cursor-pointer flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 p-[1px]">
+                  <div className="w-full h-full bg-[#0A0D14] rounded-[11px] flex items-center justify-center font-black text-cyan-400">
+                    3D
+                  </div>
+                </div>
+                <span className="text-xl font-extrabold text-white">
+                  3D Print <span className="text-gradient">Studio</span>
+                </span>
+              </div>
+
+              <nav className="flex items-center gap-2">
+                <button
+                  onClick={() => setTab('home')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${tab === 'home' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'}`}
+                >
+                  Inicio
+                </button>
+                <button
+                  onClick={() => setTab('catalog')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${tab === 'catalog' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'}`}
+                >
+                  Catálogo
+                </button>
+                <button
+                  onClick={() => setTab('admin')}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${tab === 'admin' ? 'bg-purple-600 text-white' : 'bg-white/5 text-purple-300 border border-purple-500/30'}`}
+                >
+                  Panel Admin
+                </button>
+              </nav>
+            </div>
+          </header>
+
+          {/* Content Views */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
+            
+            {/* HOME VIEW */}
+            {tab === 'home' && (
+              <div className="space-y-16">
+                {/* Hero */}
+                <div className="text-center max-w-3xl mx-auto space-y-6 pt-8">
+                  <span className="px-4 py-1.5 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-bold border border-cyan-500/20 inline-block">
+                    ★ Impresión 3D de Alta Precisión
+                  </span>
+                  <h1 className="text-4xl sm:text-6xl font-black text-white leading-tight">
+                    Tus ideas cobradas en <span className="text-gradient">Realidad 3D</span>
+                  </h1>
+                  <p className="text-base text-slate-300">
+                    Llaveros personalizados, dragones articulados, organizadores y regalos únicos. Pedidos rápidos directo por WhatsApp.
+                  </p>
+                  <div className="flex justify-center gap-4 pt-2">
+                    <button
+                      onClick={() => setTab('catalog')}
+                      className="px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 text-white font-extrabold text-sm shadow-xl hover:scale-105 transition-all"
+                    >
+                      Explorar Catálogo
+                    </button>
+                  </div>
+                </div>
+
+                {/* Featured Grid */}
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-white">Productos Destacados</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {products.filter(p => p.isFeatured).map(prod => (
+                      <div key={prod.id} className="glass-card rounded-3xl p-5 flex flex-col justify-between space-y-4 border border-white/10 hover:border-cyan-400/40 transition-all">
+                        <img src={prod.images[0]} alt={prod.name} className="w-full aspect-square object-cover rounded-2xl" />
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-cyan-400">{prod.category}</span>
+                          <h3 className="text-base font-bold text-white mt-1">{prod.name}</h3>
+                          <p className="text-xs text-slate-400 mt-1">{prod.description}</p>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                          <span className="text-lg font-black text-white">{prod.price.toFixed(2)}€</span>
+                          <button
+                            onClick={() => setSelectedProduct(prod)}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                          >
+                            Ver / Pedir
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* CATALOG VIEW */}
+            {tab === 'catalog' && (
+              <div className="space-y-8">
+                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                  <input
+                    type="text"
+                    placeholder="Buscar producto..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full sm:w-80 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400"
+                  />
+                  <div className="flex gap-2 overflow-x-auto w-full sm:w-auto">
+                    <button
+                      onClick={() => setSelectedCategory('')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold ${!selectedCategory ? 'bg-cyan-500 text-slate-950' : 'bg-white/5 text-slate-300'}`}
+                    >
+                      Todos
+                    </button>
+                    {categories.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedCategory(c.slug)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold ${selectedCategory === c.slug ? 'bg-cyan-500 text-slate-950' : 'bg-white/5 text-slate-300'}`}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {filteredProducts.map(prod => (
+                    <div key={prod.id} className="glass-card rounded-3xl p-5 flex flex-col justify-between space-y-4 border border-white/10">
+                      <img src={prod.images[0]} alt={prod.name} className="w-full aspect-square object-cover rounded-2xl" />
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-cyan-400">{prod.category}</span>
+                        <h3 className="text-base font-bold text-white mt-1">{prod.name}</h3>
+                        <p className="text-xs text-slate-400 mt-1">{prod.description}</p>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                        <span className="text-lg font-black text-white">{prod.price.toFixed(2)}€</span>
+                        <button
+                          onClick={() => setSelectedProduct(prod)}
+                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs"
+                        >
+                          Ver / Pedir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ADMIN VIEW */}
+            {tab === 'admin' && (
+              <div className="space-y-6 max-w-4xl mx-auto">
+                <div className="glass-card p-6 rounded-3xl border border-purple-500/30 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Panel de Administración (Modo 13 Años)</h2>
+                    <p className="text-xs text-slate-400">Añade o cambia precios de productos en segundos.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const name = prompt('Nombre del producto:');
+                      const price = prompt('Precio (€):');
+                      if (name && price) {
+                        const newP = {
+                          id: 'prod-' + Date.now(),
+                          name,
+                          price: parseFloat(price),
+                          description: 'Nuevo producto 3D',
+                          category: 'general',
+                          images: ['https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80'],
+                          colors: [{ name: 'Azul', hex: '#3B82F6' }],
+                          printTime: '2 horas',
+                          isFeatured: true,
+                          isActive: true,
+                          stock: 10
+                        };
+                        setProducts([newP, ...products]);
+                      }
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-purple-600 text-white font-bold text-xs"
+                  >
+                    + Añadir Producto
+                  </button>
+                </div>
+
+                <div className="glass-card rounded-3xl p-4 border border-white/10 overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="text-slate-400 uppercase font-bold border-b border-white/10">
+                      <tr>
+                        <th className="p-3">Nombre</th>
+                        <th className="p-3">Precio</th>
+                        <th className="p-3">Categoría</th>
+                        <th className="p-3">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {products.map(p => (
+                        <tr key={p.id}>
+                          <td className="p-3 font-bold text-white">{p.name}</td>
+                          <td className="p-3 font-black text-cyan-400">{p.price.toFixed(2)}€</td>
+                          <td className="p-3">{p.category}</td>
+                          <td className="p-3">
+                            <button
+                              onClick={() => setProducts(products.filter(item => item.id !== p.id))}
+                              className="px-3 py-1 rounded-lg bg-rose-500/20 text-rose-300 font-bold"
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+          </main>
+
+          {/* Modal Detail */}
+          {selectedProduct && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <div className="glass-card max-w-lg w-full p-6 rounded-3xl border border-white/20 space-y-4">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-xl font-bold text-white">{selectedProduct.name}</h3>
+                  <button onClick={() => setSelectedProduct(null)} className="text-slate-400 hover:text-white font-bold">✕</button>
+                </div>
+                <img src={selectedProduct.images[0]} alt="" className="w-full aspect-video object-cover rounded-2xl" />
+                <p className="text-xs text-slate-300">{selectedProduct.description}</p>
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-2xl font-black text-white">{selectedProduct.price.toFixed(2)}€</span>
+                  <a
+                    href={getWhatsAppUrl(selectedProduct, selectedProduct.colors?.[0]?.name, '')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 rounded-xl bg-emerald-500 text-white font-bold text-xs"
+                  >
+                    Pedir por WhatsApp
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer className="w-full border-t border-white/10 py-8 text-center text-xs text-slate-500">
+            © {new Date().getFullYear()} 3D Print Studio. Todos los derechos reservados.
+          </footer>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
