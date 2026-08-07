@@ -3,6 +3,7 @@ import {
   User,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   getRedirectResult,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -133,19 +134,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await signInWithPopup(auth, provider);
     } catch (err: any) {
-      console.warn('Google Sign-In error:', err?.code, err?.message);
-
-      if (
-        err?.code === 'auth/popup-blocked' ||
-        err?.code === 'auth/operation-not-supported-in-this-environment' ||
-        err?.code === 'auth/disallowed-useragent' ||
-        err?.code === 'auth/unauthorized-domain'
-      ) {
-        setAuthError('Google bloquea emergentes en Apps Android. Haz clic en la pestaña "Email" para iniciar sesión o registrarte.');
-      } else if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
+      console.warn('Google Sign-In popup error, attempting redirect fallback:', err?.code, err?.message);
+      if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
         setAuthError(null);
-      } else {
-        setAuthError('Para la App Móvil Android, usa el formulario de la pestaña "Email" (Email/Contraseña).');
+        return;
+      }
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectErr: any) {
+        console.error('Google Sign-In redirect error:', redirectErr);
+        setAuthError('Utiliza la pestaña "Email" (Email/Contraseña) para acceder directamente.');
       }
     }
   };
