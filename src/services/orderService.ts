@@ -32,6 +32,16 @@ export const setLocalOrders = (orders: Order[]): void => {
   }
 };
 
+const removeUndefined = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(removeUndefined);
+  return Object.fromEntries(
+    Object.entries(obj)
+      .filter(([_, v]) => v !== undefined)
+      .map(([k, v]) => [k, removeUndefined(v)])
+  );
+};
+
 export const clearLocalOrdersStorage = (): void => {
   try {
     localStorage.removeItem(LOCAL_STORAGE_ORDERS_KEY);
@@ -92,20 +102,21 @@ export const checkAndApplyAutoReceive24h = async (orders: Order[]): Promise<Orde
  * Create a new order in Firestore & send confirmation email
  */
 export const createOrder = async (order: Order): Promise<void> => {
+  const cleanOrder = removeUndefined(order) as Order;
   if (isFirebaseConfigured && db) {
     try {
-      await setDoc(doc(db, 'orders', order.id), order);
+      await setDoc(doc(db, 'orders', cleanOrder.id), cleanOrder);
     } catch (e) {
-      console.warn('Firebase order creation error, using local fallback:', e);
+      console.error('Firebase order creation error:', e);
     }
   }
 
   const current = getLocalOrders();
-  current.unshift(order);
+  current.unshift(cleanOrder);
   setLocalOrders(current);
 
   // Send initial order confirmation email
-  sendOrderStatusEmailNotification(order, 'pending_approval');
+  sendOrderStatusEmailNotification(cleanOrder, 'pending_approval');
 };
 
 /**

@@ -77,7 +77,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             unitPrice,
             quantity,
             selectedColor,
-            customText: customText.trim() || undefined,
+            customText: customText.trim() || '',
             totalPrice: subtotal
           }
         ],
