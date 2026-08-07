@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Sun, Moon, Search, ShieldCheck, Menu, X, Sparkles, LogOut, LogIn, ChevronDown, Crown } from 'lucide-react';
+import { Box, Sun, Moon, Search, ShieldCheck, Menu, X, Sparkles, LogOut, LogIn, ChevronDown, Crown, ShoppingBag } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { BusinessConfig } from '../../types/config';
@@ -10,6 +10,7 @@ interface HeaderProps {
   onNavigate: (tab: string) => void;
   onOpenSearch?: () => void;
   onOpenLogin?: () => void;
+  onOpenMyOrders?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,7 +18,8 @@ export const Header: React.FC<HeaderProps> = ({
   currentTab,
   onNavigate,
   onOpenSearch,
-  onOpenLogin
+  onOpenLogin,
+  onOpenMyOrders
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { appUser, logout, isAdmin } = useAuth();
@@ -113,6 +115,17 @@ export const Header: React.FC<HeaderProps> = ({
             {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-400" />}
           </button>
 
+          {/* My Orders Button (Logged in users) */}
+          {appUser && onOpenMyOrders && (
+            <button
+              onClick={onOpenMyOrders}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold text-xs transition-all shadow-md"
+            >
+              <ShoppingBag className="w-4 h-4 text-cyan-400" />
+              <span className="hidden sm:inline">Mis Pedidos</span>
+            </button>
+          )}
+
           {/* Admin Panel Access Button (Only for Admin users) */}
           {isAdmin && (
             <button
@@ -166,6 +179,19 @@ export const Header: React.FC<HeaderProps> = ({
                       )}
                     </div>
 
+                    {onOpenMyOrders && (
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onOpenMyOrders();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-cyan-300 hover:bg-cyan-500/10 font-bold transition-colors border-b border-white/5"
+                      >
+                        <ShoppingBag className="w-4 h-4 text-cyan-400" />
+                        <span>Mis Pedidos 3D</span>
+                      </button>
+                    )}
+
                     {isAdmin && (
                       <button
                         onClick={() => {
@@ -175,7 +201,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-purple-300 hover:bg-purple-500/10 font-bold transition-colors border-b border-white/5"
                       >
                         <ShieldCheck className="w-4 h-4 text-purple-400" />
-                        <span>Abrir Panel de Control</span>
+                        <span>Panel de Administración</span>
                       </button>
                     )}
 
@@ -233,6 +259,19 @@ export const Header: React.FC<HeaderProps> = ({
               {item.label}
             </button>
           ))}
+
+          {appUser && onOpenMyOrders && (
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenMyOrders();
+              }}
+              className="w-full flex items-center justify-center gap-2 mt-1 px-4 py-3 rounded-xl bg-cyan-600/20 text-cyan-300 border border-cyan-500/30 font-semibold"
+            >
+              <ShoppingBag className="w-5 h-5 text-cyan-400" />
+              Mis Pedidos
+            </button>
+          )}
 
           {isAdmin && (
             <button

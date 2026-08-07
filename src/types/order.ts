@@ -1,18 +1,42 @@
+export type OrderStatus =
+  | 'pending_approval'           // Pendiente de Aceptación por el Admin
+  | 'pending_payment'            // Pendiente de Pago por Bizum (Aceptado por Admin)
+  | 'in_production'             // En Fabricación / Pagado
+  | 'completed_pending_delivery' // Finalizado / Pendiente de Entrega
+  | 'delivered'                  // Entregado (inicia cuenta atrás de 24h)
+  | 'received'                   // Recibido por el Cliente
+  | 'cancelled';                 // Cancelado
+
 export interface OrderItem {
   productId: string;
+  productSku: string;
   productName: string;
-  price: number;
-  colorName: string;
-  customNotes?: string;
+  productImage: string;
+  unitPrice: number;
+  quantity: number;
+  selectedColor?: string;
+  customText?: string;
+  totalPrice: number;
 }
 
 export interface Order {
   id: string;
-  customerName?: string;
-  customerPhone?: string;
+  orderNumber: string;          // Ej: #ORD-1042
+  userId: string;
+  userName: string;
+  userEmail: string;
   items: OrderItem[];
+  subtotal: number;
+  shippingCost: number;
   totalAmount: number;
-  status: 'pendiente' | 'en_impresion' | 'completado' | 'cancelado';
+  status: OrderStatus;
+  bizumPhone: string;
   createdAt: string;
+  acceptedAt?: string;
+  paidAt?: string;
+  inProductionAt?: string;
+  deliveredAt?: string;
+  receivedAt?: string;
+  userReviewSubmitted?: boolean;
   notes?: string;
 }

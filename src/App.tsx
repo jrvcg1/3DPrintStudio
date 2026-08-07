@@ -9,6 +9,7 @@ import { FloatingWhatsAppButton } from './components/common/FloatingWhatsAppButt
 import { Loader } from './components/common/Loader';
 import { WebLoginScreen } from './components/auth/WebLoginScreen';
 import { ProductDetailModal } from './components/product/ProductDetailModal';
+import { MyOrdersModal } from './components/orders/MyOrdersModal';
 import { HomePage } from './pages/HomePage';
 import { CatalogPage } from './pages/CatalogPage';
 import { AdminPanel } from './components/admin/AdminPanel';
@@ -56,6 +57,7 @@ export const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState('home');
   const [catalogCategoryFilter, setCatalogCategoryFilter] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isMyOrdersOpen, setIsMyOrdersOpen] = useState(false);
 
   // Sync data asynchronously
   const syncData = async () => {
@@ -156,6 +158,7 @@ export const AppContent: React.FC = () => {
         onNavigate={handleNavigate}
         onOpenSearch={() => handleNavigate('catalog')}
         onOpenLogin={() => setGuestMode(false)}
+        onOpenMyOrders={() => setIsMyOrdersOpen(true)}
       />
 
       {/* Main View Router */}
@@ -223,8 +226,23 @@ export const AppContent: React.FC = () => {
       {/* Product Detail Modal */}
       <ProductDetailModal
         product={selectedProduct}
-        whatsappNumber={config.whatsappNumber}
+        config={config}
         onClose={() => setSelectedProduct(null)}
+        onOrderSuccess={(newOrder) => {
+          setSelectedProduct(null);
+          setIsMyOrdersOpen(true);
+        }}
+        onRequireAuth={() => {
+          setSelectedProduct(null);
+          setGuestMode(false);
+        }}
+      />
+
+      {/* My Orders Modal */}
+      <MyOrdersModal
+        isOpen={isMyOrdersOpen}
+        onClose={() => setIsMyOrdersOpen(false)}
+        onAddReview={handleAddReview}
       />
     </div>
   );

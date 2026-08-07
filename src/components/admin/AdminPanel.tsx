@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import {
   Plus, Edit, Trash2, ShieldCheck, Box, RefreshCw, Download, Settings,
   Eye, EyeOff, Save, CheckCircle2, AlertTriangle, Layers, MessageSquare,
-  Sparkles, Image as ImageIcon, Phone, Users, Mail, Calendar, Clock, UserX, Crown, LogOut
+  Sparkles, Image as ImageIcon, Phone, Users, Mail, Calendar, Clock, UserX, Crown, LogOut,
+  ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter
 } from 'lucide-react';
 import { ADMIN_PASSWORD } from '../../config/admin';
 import { Product, ProductColor, getProductSku } from '../../types/product';
 import { Category } from '../../types/category';
 import { BusinessConfig } from '../../types/config';
-import { Order } from '../../types/order';
+import { Order, OrderStatus } from '../../types/order';
 import { AppUser } from '../../types/user';
 import { getUsers, deleteUserProfile, updateUserRole } from '../../services/userService';
+import { subscribeAllOrders, updateOrderStatus } from '../../services/orderService';
 import { useToast } from '../../context/ToastContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { MakerWorldImportModal } from './MakerWorldImportModal';
@@ -31,7 +33,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   products,
   categories,
   config,
-  orders,
+  orders: initialOrders,
   onSaveProduct,
   onDeleteProduct,
   onSaveConfig,
@@ -42,7 +44,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const { user, appUser, loading: authLoading, authError, isAdmin, signInWithGoogle, logout } = useAdminAuth();
 
   // Component states
-  const [activeTab, setActiveTab] = useState<'products' | 'config' | 'categories' | 'orders' | 'users'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'config' | 'categories' | 'users'>('orders');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isMakerWorldOpen, setIsMakerWorldOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
@@ -50,11 +52,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [newCatName, setNewCatName] = useState('');
   const [newCatDescription, setNewCatDescription] = useState('');
 
+  // Real-time Orders state
+  const [liveOrders, setLiveOrders] = useState<Order[]>(initialOrders || []);
+  const [orderFilter, setOrderFilter] = useState<'all' | OrderStatus>('all');
+
   // Users management state
   const [users, setUsers] = useState<AppUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
   useEffect(() => { setConfigForm(config); }, [config]);
+
+  // Subscribe to live orders when Admin panel is active
+  useEffect(() => {
+    if (isAdmin) {
+      const unsubscribe = subscribeAllOrders((data) => {
+        setLiveOrders(data);
+      });
+      return unsubscribe;
+    }
+  }, [isAdmin]);
 
   // Load users when tab is selected
   useEffect(() => {
@@ -128,9 +144,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <p className="text-xs text-slate-400 mt-2">
               Tu cuenta <span className="text-white font-bold">{appUser?.email || user.email}</span> no tiene permisos de administrador.
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Contacta con el propietario del sistema para que te asigne el rol de administrador.
-            </p>
           </div>
           <button
             onClick={logout}
@@ -155,95 +168,90 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       slug: '',
       description: '',
       longDescription: '',
-      price: 9.99,
-      category: categories[0]?.slug || 'general',
+      price: 9.95,
+      category: categories[0]?.slug || 'figuras',
       images: ['https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80'],
+      material: 'PLA Premium Ecológico',
+      printTime: '4h 30m',
+      layerHeight: '0.16mm',
+      dimensions: '10 x 10 x 12 cm',
+      weightGrams: 85,
       colors: [
-        { name: 'Azul Eléctrico', hex: '#3B82F6' },
-        { name: 'Negro Mate', hex: '#111827' }
+        { name: 'Negro Mate', hex: '#1E293B' },
+        { name: 'Blanco Seda', hex: '#F8FAFC' },
+        { name: 'Cian Neón', hex: '#06B6D4' }
       ],
-      printTime: '3 horas',
-      material: 'PLA Premium Biodegradable',
       isCustomizable: true,
-      isFeatured: false,
-      isActive: true,
+      inStock: true,
       stock: 10,
-      popularity: 50,
-      createdAt: new Date().toISOString()
+      isActive: true,
+      rating: 5.0,
+      reviewCount: 1,
+      makerworldId: '',
+      designer: '3D Studio'
     });
     setIsFormOpen(true);
   };
 
   const handleEditProduct = (p: Product) => {
-    setEditingProduct({ ...p });
+    setEditingProduct(p);
     setIsFormOpen(true);
   };
 
   const handleSaveProductForm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct || !editingProduct.name || !editingProduct.price) return;
+    if (!editingProduct || !editingProduct.name) return;
 
-    const slug = editingProduct.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
     const finalProduct: Product = {
       id: editingProduct.id || 'prod-' + Date.now(),
-      sku: editingProduct.sku || `3D-${Math.floor(100 + Math.random() * 900)}`,
+      sku: editingProduct.sku || '3D-' + Math.floor(100 + Math.random() * 900),
       name: editingProduct.name,
-      slug: slug || 'producto-3d',
-      description: editingProduct.description || 'Producto 3D de alta calidad.',
+      slug: editingProduct.slug || editingProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      description: editingProduct.description || '',
       longDescription: editingProduct.longDescription || editingProduct.description || '',
-      price: Number(editingProduct.price),
-      category: editingProduct.category || categories[0]?.slug || 'general',
-      images: editingProduct.images && editingProduct.images.length > 0
-        ? editingProduct.images
-        : ['https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80'],
-      colors: editingProduct.colors || [],
-      printTime: editingProduct.printTime || '2 horas',
-      material: editingProduct.material || 'PLA Ecológico',
+      price: editingProduct.price || 9.95,
+      category: editingProduct.category || categories[0]?.slug || 'figuras',
+      images: editingProduct.images && editingProduct.images.length > 0 ? editingProduct.images : ['https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80'],
+      material: editingProduct.material || 'PLA Premium',
+      printTime: editingProduct.printTime || '3-5h',
+      colors: editingProduct.colors || [{ name: 'Estándar', hex: '#3B82F6' }],
       isCustomizable: editingProduct.isCustomizable ?? true,
-      isFeatured: editingProduct.isFeatured ?? false,
+      inStock: editingProduct.inStock ?? true,
+      stock: editingProduct.stock ?? 10,
       isActive: editingProduct.isActive ?? true,
-      stock: Number(editingProduct.stock || 10),
-      popularity: editingProduct.popularity || 50,
-      createdAt: editingProduct.createdAt || new Date().toISOString()
+      rating: editingProduct.rating || 5.0,
+      reviewCount: editingProduct.reviewCount || 1,
+      makerworldId: editingProduct.makerworldId || '',
+      designer: editingProduct.designer || '3D Studio'
     };
 
     onSaveProduct(finalProduct);
-    showToast('¡Producto guardado con éxito!', 'success');
     setIsFormOpen(false);
-    setEditingProduct(null);
+    showToast('Producto guardado correctamente', 'success');
   };
 
-  /* ==========================================================
-     CONFIG HANDLERS
-     ========================================================== */
   const handleSaveConfigForm = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveConfig(configForm);
     showToast('Configuración del negocio actualizada', 'success');
   };
 
-  /* ==========================================================
-     CSV EXPORT HANDLER
-     ========================================================== */
-  const handleExportCSV = () => {
-    const headers = ['ID', 'Nombre', 'Precio', 'Categoria', 'Stock', 'Activo'];
-    const rows = products.map(p => [p.id, `"${p.name}"`, p.price, p.category, p.stock, p.isActive ? 'SI' : 'NO']);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `productos_3d_studio_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    showToast('Catálogo exportado a CSV', 'info');
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    await updateOrderStatus(orderId, newStatus);
+    showToast('Estado del pedido actualizado', 'success');
   };
+
+  // Filtered orders list
+  const filteredOrders = liveOrders.filter(o => {
+    if (orderFilter === 'all') return true;
+    return o.status === orderFilter;
+  });
+
+  const pendingApprovalCount = liveOrders.filter(o => o.status === 'pending_approval').length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Top Banner Teen-Friendly */}
+      {/* Top Banner */}
       <div className="glass-card p-6 rounded-3xl border border-purple-500/30 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-purple-900/20 via-slate-900 to-blue-900/20">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-500 to-cyan-400 p-[1px]">
@@ -253,49 +261,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
           <div>
             <h1 className="text-2xl font-black text-white flex items-center gap-2">
-              Panel de Control <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">Modo Emprendedor</span>
+              Panel de Control <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">Administrador</span>
             </h1>
             <p className="text-xs text-slate-300 mt-1">
-              Diseñado para ser extremadamente fácil de usar. Gestiona tus productos, precios y WhatsApp en segundos.
+              Gestiona los pedidos de la web, productos, usuarios y Bizum en tiempo real.
             </p>
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                onClick={() => setActiveTab('config')}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500/25 transition-all shadow-sm"
-                title="Haz clic para modificar el teléfono de pedidos"
-              >
-                <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Teléfono de Pedidos: +{config.whatsappNumber}</span>
-                <Edit className="w-3 h-3 ml-1 text-slate-400" />
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Quick Action Buttons */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={handleExportCSV}
-            className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-bold transition-all"
-          >
-            <Download className="w-4 h-4 text-cyan-400" />
-            <span>Exportar CSV</span>
-          </button>
-
-          <button
-            onClick={() => {
-              if (window.confirm('¿Seguro que deseas restaurar los productos iniciales de ejemplo?')) {
-                onResetDemoData();
-                showToast('Datos de demostración restaurados', 'info');
-              }
-            }}
-            className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all"
-          >
-            <RefreshCw className="w-4 h-4 text-rose-400" />
-            <span>Restaurar Muestra</span>
-          </button>
-
-          {/* Admin user info + logout */}
+        {/* Admin user info + logout */}
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20">
             {appUser?.photoURL && (
               <img src={appUser.photoURL} alt={appUser.displayName} className="w-6 h-6 rounded-full object-cover ring-1 ring-purple-400/50" />
@@ -317,6 +292,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* Tabs Bar */}
       <div className="flex items-center gap-2 border-b border-white/10 pb-4 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('orders')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all relative ${
+            activeTab === 'orders'
+              ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/25'
+              : 'bg-white/5 text-slate-400 hover:text-white'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4 text-amber-400" />
+          <span>Pedidos Web ({liveOrders.length})</span>
+          {pendingApprovalCount > 0 && (
+            <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] animate-pulse">
+              {pendingApprovalCount} nuevos
+            </span>
+          )}
+        </button>
+
         <button
           onClick={() => setActiveTab('products')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all ${
@@ -365,6 +357,176 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <span>Usuarios {users.length > 0 ? `(${users.length})` : ''}</span>
         </button>
       </div>
+
+      {/* TAB: ORDERS MANAGER (MAIN REQUIREMENT) */}
+      {activeTab === 'orders' && (
+        <div className="space-y-6">
+          {/* Status Filter Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <span className="text-xs text-slate-400 flex items-center gap-1 font-bold mr-1">
+              <Filter className="w-3.5 h-3.5" /> Filtrar:
+            </span>
+            {[
+              { id: 'all', label: `Todos (${liveOrders.length})` },
+              { id: 'pending_approval', label: `🟡 Pendientes Aceptación (${liveOrders.filter(o => o.status === 'pending_approval').length})` },
+              { id: 'pending_payment', label: `💳 Pendientes Pago (${liveOrders.filter(o => o.status === 'pending_payment').length})` },
+              { id: 'in_production', label: `⚙️ En Fabricación (${liveOrders.filter(o => o.status === 'in_production').length})` },
+              { id: 'completed_pending_delivery', label: `📦 Listo Entrega (${liveOrders.filter(o => o.status === 'completed_pending_delivery').length})` },
+              { id: 'delivered', label: `🚚 Entregados (${liveOrders.filter(o => o.status === 'delivered').length})` },
+              { id: 'received', label: `✅ Recibidos (${liveOrders.filter(o => o.status === 'received').length})` }
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setOrderFilter(f.id as any)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                  orderFilter === f.id
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-md'
+                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Orders Cards List */}
+          {filteredOrders.length === 0 ? (
+            <div className="glass-card rounded-3xl p-12 text-center border border-white/10 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto">
+                <ShoppingBag className="w-7 h-7 text-amber-400" />
+              </div>
+              <p className="text-sm font-bold text-slate-300">No hay pedidos en este estado</p>
+              <p className="text-xs text-slate-500">
+                Los clientes que realicen un pedido desde la web o la app aparecerán aquí en tiempo real.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredOrders.map(ord => (
+                <div
+                  key={ord.id}
+                  className="glass-card rounded-3xl p-5 border border-white/10 space-y-4 hover:border-amber-500/30 transition-all shadow-xl"
+                >
+                  {/* Order Top Bar */}
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-black text-amber-300 px-2.5 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30">
+                        {ord.orderNumber}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium">
+                        {new Date(ord.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    <AdminStatusBadge status={ord.status} />
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="bg-slate-900/60 p-3 rounded-2xl border border-white/5 space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Cliente:</span>
+                      <span className="font-bold text-white">{ord.userName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Email:</span>
+                      <span className="text-slate-300 truncate max-w-[200px]">{ord.userEmail}</span>
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  <div className="space-y-2">
+                    {ord.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
+                        {item.productImage && (
+                          <img src={item.productImage} alt="" className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-extrabold text-white text-xs truncate">{item.productName}</p>
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                            <span>Cant: <strong className="text-white">{item.quantity}</strong></span>
+                            {item.selectedColor && (
+                              <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-cyan-300">
+                                Color: {item.selectedColor}
+                              </span>
+                            )}
+                            {item.customText && (
+                              <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-purple-300 uppercase">
+                                Texto: "{item.customText}"
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="font-black text-white text-xs">{item.totalPrice.toFixed(2)}€</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Amount summary */}
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span className="text-slate-400">Importe Total:</span>
+                    <span className="text-lg font-black text-amber-300">{ord.totalAmount.toFixed(2)}€</span>
+                  </div>
+
+                  {/* ADMIN TRANSITION ACTION BUTTONS */}
+                  <div className="pt-2 border-t border-white/10">
+                    {ord.status === 'pending_approval' && (
+                      <button
+                        onClick={() => handleStatusChange(ord.id, 'pending_payment')}
+                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Aceptar Pedido (Solicitar Pago Bizum)</span>
+                      </button>
+                    )}
+
+                    {ord.status === 'pending_payment' && (
+                      <button
+                        onClick={() => handleStatusChange(ord.id, 'in_production')}
+                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                      >
+                        <CreditCard className="w-4 h-4" />
+                        <span>Confirmar Pago Bizum e Iniciar Fabricación</span>
+                      </button>
+                    )}
+
+                    {ord.status === 'in_production' && (
+                      <button
+                        onClick={() => handleStatusChange(ord.id, 'completed_pending_delivery')}
+                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                      >
+                        <Package className="w-4 h-4" />
+                        <span>Finalizado / Listo para Entrega</span>
+                      </button>
+                    )}
+
+                    {ord.status === 'completed_pending_delivery' && (
+                      <button
+                        onClick={() => handleStatusChange(ord.id, 'delivered')}
+                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                      >
+                        <Truck className="w-4 h-4" />
+                        <span>Marcar como Entregado (Inicia timer 24h)</span>
+                      </button>
+                    )}
+
+                    {ord.status === 'delivered' && (
+                      <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-center text-xs text-teal-300 font-bold">
+                        🚚 Entregado · Esperando confirmación del cliente (Auto-recibido en 24h)
+                      </div>
+                    )}
+
+                    {ord.status === 'received' && (
+                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-xs text-emerald-300 font-bold">
+                        ✅ Pedido completado y Recibido por el cliente
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* TAB 1: PRODUCTS MANAGER */}
       {activeTab === 'products' && (
@@ -498,7 +660,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
               <label className="text-xs font-bold uppercase text-emerald-300 flex items-center gap-2">
                 <Phone className="w-4 h-4 text-emerald-400" />
-                Número de WhatsApp para Pedidos (con prefijo de país):
+                Número de Teléfono para Bizum y Pedidos (con prefijo):
               </label>
               <input
                 type="text"
@@ -508,7 +670,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-emerald-500/30 text-white text-sm focus:outline-none focus:border-emerald-400 font-mono font-bold"
               />
               <span className="text-[11px] text-emerald-300/80 block">
-                📱 En este número recibirás los mensajes instantáneos de cada cliente cuando pulsen "Pedir por WhatsApp".
+                📱 Este número se le mostrará al cliente para realizar el pago por Bizum una vez aceptado su pedido.
               </span>
             </div>
 
@@ -605,6 +767,122 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: USERS MANAGER */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-violet-400" />
+                Usuarios Registrados
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Clientes que han iniciado sesión con Google en la tienda web o app móvil.
+              </p>
+            </div>
+            <button
+              onClick={() => { setUsersLoading(true); getUsers().then(d => { setUsers(d); setUsersLoading(false); }); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 text-slate-300 hover:text-white text-xs font-bold transition-all border border-white/10"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${usersLoading ? 'animate-spin' : ''}`} />
+              <span>Actualizar</span>
+            </button>
+          </div>
+
+          {usersLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="w-8 h-8 border-4 border-violet-500/20 border-t-violet-400 rounded-full animate-spin" />
+              <p className="text-xs text-slate-400">Cargando usuarios...</p>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="glass-card rounded-3xl p-12 text-center border border-white/10 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mx-auto">
+                <Users className="w-7 h-7 text-violet-400" />
+              </div>
+              <p className="text-sm font-bold text-slate-300">Aún no hay usuarios registrados</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {users.map((u) => (
+                <div
+                  key={u.uid}
+                  className="glass-card p-5 rounded-3xl border border-white/10 space-y-4 hover:border-violet-500/30 transition-all flex flex-col justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    {u.photoURL ? (
+                      <img src={u.photoURL} alt={u.displayName} className="w-12 h-12 rounded-2xl object-cover ring-2 ring-violet-500/30" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-500 to-indigo-500 flex items-center justify-center text-lg font-black text-white">
+                        {u.displayName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white text-sm truncate">{u.displayName || 'Sin nombre'}</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">
+                          Google
+                        </span>
+                        {u.role === 'admin' && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-0.5">
+                            <Crown className="w-2.5 h-2.5" /> Admin
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Mail className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <span className="truncate">{u.email || 'Sin email'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <span>Registrado: {u.createdAt ? new Date(u.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        const newRole = u.role === 'admin' ? 'user' : 'admin';
+                        const msg = newRole === 'admin'
+                          ? `¿Hacer administrador a ${u.displayName}?`
+                          : `¿Quitar permisos de administrador a ${u.displayName}?`;
+                        if (!confirm(msg)) return;
+                        await updateUserRole(u.uid, newRole);
+                        setUsers(prev => prev.map(x => x.uid === u.uid ? { ...x, role: newRole } : x));
+                        showToast(newRole === 'admin' ? `${u.displayName} ahora es administrador` : `Permisos retirados a ${u.displayName}`, 'success');
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                        u.role === 'admin'
+                          ? 'bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30'
+                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-purple-300'
+                      }`}
+                    >
+                      <Crown className="w-3.5 h-3.5" />
+                      <span>{u.role === 'admin' ? 'Quitar Admin' : 'Hacer Admin'}</span>
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`¿Eliminar el perfil de ${u.displayName}?`)) return;
+                        await deleteUserProfile(u.uid);
+                        setUsers(prev => prev.filter(x => x.uid !== u.uid));
+                        showToast('Perfil de usuario eliminado', 'success');
+                      }}
+                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-bold transition-all"
+                    >
+                      <UserX className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -743,140 +1021,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       )}
 
-
-      {/* TAB 5: USERS MANAGER */}
-      {activeTab === 'users' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-violet-400" />
-                Usuarios Registrados
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Clientes que han iniciado sesión con Google en la app móvil.
-              </p>
-            </div>
-            <button
-              onClick={() => { setUsersLoading(true); getUsers().then(d => { setUsers(d); setUsersLoading(false); }); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 text-slate-300 hover:text-white text-xs font-bold transition-all border border-white/10"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${usersLoading ? 'animate-spin' : ''}`} />
-              <span>Actualizar</span>
-            </button>
-          </div>
-
-          {usersLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="w-8 h-8 border-4 border-violet-500/20 border-t-violet-400 rounded-full animate-spin" />
-              <p className="text-xs text-slate-400">Cargando usuarios...</p>
-            </div>
-          ) : users.length === 0 ? (
-            <div className="glass-card rounded-3xl p-12 text-center border border-white/10 space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mx-auto">
-                <Users className="w-7 h-7 text-violet-400" />
-              </div>
-              <p className="text-sm font-bold text-slate-300">Aún no hay usuarios registrados</p>
-              <p className="text-xs text-slate-500">
-                Los usuarios aparecen aquí automáticamente cuando inician sesión con Google en la app móvil.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {users.map(u => (
-                <div
-                  key={u.uid}
-                  className="glass-card rounded-3xl p-5 border border-white/10 space-y-4 hover:border-violet-500/30 transition-all"
-                >
-                  {/* Header: Avatar + Name + Provider */}
-                  <div className="flex items-center gap-3">
-                    {u.photoURL ? (
-                      <img
-                        src={u.photoURL}
-                        alt={u.displayName}
-                        className="w-12 h-12 rounded-2xl object-cover ring-2 ring-violet-500/30"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-500 to-indigo-500 flex items-center justify-center text-lg font-black text-white">
-                        {u.displayName?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white text-sm truncate">{u.displayName || 'Sin nombre'}</p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">
-                          Google
-                        </span>
-                        {u.role === 'admin' && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-0.5">
-                            <Crown className="w-2.5 h-2.5" /> Admin
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* User details */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                      <Mail className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-                      <span className="truncate">{u.email || 'Sin email'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                      <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-                      <span>Registrado: {u.createdAt ? new Date(u.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                      <Clock className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-                      <span>Último acceso: {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</span>
-                    </div>
-                  </div>
-
-                  {/* Role toggle + Delete buttons */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={async () => {
-                        const newRole = u.role === 'admin' ? 'user' : 'admin';
-                        const msg = newRole === 'admin'
-                          ? `¿Hacer administrador a ${u.displayName}? Tendrá acceso al panel de control.`
-                          : `¿Quitar permisos de administrador a ${u.displayName}?`;
-                        if (!confirm(msg)) return;
-                        await updateUserRole(u.uid, newRole);
-                        setUsers(prev => prev.map(x => x.uid === u.uid ? { ...x, role: newRole } : x));
-                        showToast(
-                          newRole === 'admin' ? `${u.displayName} ahora es administrador` : `Permisos retirados a ${u.displayName}`,
-                          'success'
-                        );
-                      }}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all border ${
-                        u.role === 'admin'
-                          ? 'bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30'
-                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-purple-300 hover:border-purple-500/30'
-                      }`}
-                    >
-                      <Crown className="w-3.5 h-3.5" />
-                      <span>{u.role === 'admin' ? 'Quitar Admin' : 'Hacer Admin'}</span>
-                    </button>
-
-                    <button
-                      onClick={async () => {
-                        if (!confirm(`¿Eliminar el perfil de ${u.displayName}? Esta acción no elimina su cuenta de Google.`)) return;
-                        await deleteUserProfile(u.uid);
-                        setUsers(prev => prev.filter(x => x.uid !== u.uid));
-                        showToast('Perfil de usuario eliminado', 'success');
-                      }}
-                      className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-bold transition-all"
-                    >
-                      <UserX className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* MAKERWORLD IMPORT MODAL */}
       <MakerWorldImportModal
         isOpen={isMakerWorldOpen}
@@ -889,4 +1033,48 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       />
     </div>
   );
+};
+
+/* ─── Admin Status Badge Component ─── */
+const AdminStatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
+  switch (status) {
+    case 'pending_approval':
+      return (
+        <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+          🟡 Pendiente Aceptación
+        </span>
+      );
+    case 'pending_payment':
+      return (
+        <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-xl bg-blue-500/20 text-blue-300 border border-blue-500/40">
+          💳 Pendiente Pago (Bizum)
+        </span>
+      );
+    case 'in_production':
+      return (
+        <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/40">
+          ⚙️ En Fabricación
+        </span>
+      );
+    case 'completed_pending_delivery':
+      return (
+        <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+          📦 Listo para Entrega
+        </span>
+      );
+    case 'delivered':
+      return (
+        <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/40">
+          🚚 Entregado
+        </span>
+      );
+    case 'received':
+      return (
+        <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+          ✅ Recibido por Cliente
+        </span>
+      );
+    default:
+      return null;
+  }
 };
