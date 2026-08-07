@@ -103,7 +103,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
           Explora nuestros <span className="text-gradient">Modelos & Diseños</span>
         </h1>
         <p className="text-sm text-slate-400">
-          Selecciona tu modelo favorito, personaliza el color y solicítalo al instante por WhatsApp.
+          Selecciona tu modelo favorito, personaliza el color y haz tu pedido directamente online.
         </p>
       </div>
 

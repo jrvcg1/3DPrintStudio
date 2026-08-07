@@ -34,7 +34,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
-              Llaveros con tu nombre, figuras articuladas, organizadores de escritorio y regalos únicos hechos bajo demanda. <strong className="text-white">Haz tu pedido directo en 1 clic por WhatsApp.</strong>
+              Llaveros con tu nombre, figuras articuladas, organizadores de escritorio y regalos únicos hechos bajo demanda. <strong className="text-white">Haz tu pedido online y sigue su estado en tiempo real.</strong>
             </p>
 
             {/* Action Buttons */}
@@ -43,7 +43,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onClick={onExploreCatalog}
                 className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 hover:opacity-90 text-white font-extrabold text-base shadow-xl shadow-blue-500/25 active:scale-95 transition-all group"
               >
-                <span>Explorar Catálogo</span>
+                <span>Explorar Catálogo & Pedir</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
 
@@ -52,7 +52,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 className="w-full sm:w-auto flex items-center justify-center gap-3 px-7 py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/15 font-bold text-base backdrop-blur-md active:scale-95 transition-all"
               >
                 <MessageSquare className="w-5 h-5 text-emerald-400" />
-                <span>Pedir por WhatsApp</span>
+                <span>Dudas por WhatsApp</span>
               </button>
             </div>
 

@@ -22,7 +22,7 @@ export const LegalPage: React.FC = () => {
 
         <h2 className="text-lg font-bold text-white">3. Modalidad de Compra</h2>
         <p>
-          La plataforma opera mediante pedidos directos por la aplicación de mensajería instantánea WhatsApp. No se solicitan ni almacenan datos bancarios en este servidor.
+          La plataforma procesa pedidos directamente a través de nuestra base de datos segura con código de seguimiento en tiempo real y confirmación de compra.
         </p>
       </div>
     </div>

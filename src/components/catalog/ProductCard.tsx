@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Clock, Layers, MessageSquare, Eye, Check, Tag } from 'lucide-react';
+import { Sparkles, Clock, Layers, ShoppingBag, Eye, Check, Tag } from 'lucide-react';
 import { Product, ProductColor, getProductSku } from '../../types/product';
 import { buildWhatsAppProductUrl } from '../../services/whatsappService';
 
@@ -125,15 +125,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </span>
           </div>
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+          <button
+            type="button"
+            onClick={() => onSelectProduct(product)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 hover:from-blue-500 hover:to-cyan-400 text-white font-extrabold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition-all"
           >
-            <MessageSquare className="w-4 h-4" />
+            <ShoppingBag className="w-4 h-4" />
             <span>Pedir</span>
-          </a>
+          </button>
         </div>
       </div>
     </div>

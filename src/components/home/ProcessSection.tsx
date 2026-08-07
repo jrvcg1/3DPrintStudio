@@ -1,5 +1,5 @@
 import React from 'react';
-import { MousePointerClick, Palette, MessageSquareDot, ArrowRight } from 'lucide-react';
+import { MousePointerClick, Palette, ShoppingBag, ArrowRight } from 'lucide-react';
 
 export const ProcessSection: React.FC = () => {
   const steps = [
@@ -19,9 +19,9 @@ export const ProcessSection: React.FC = () => {
     },
     {
       num: '03',
-      title: 'Pide por WhatsApp',
-      description: 'Pulsa el botón "Pedir" y se abrirá el chat con todos los detalles ya escritos para enviarnos.',
-      icon: MessageSquareDot,
+      title: 'Haz tu Pedido Online',
+      description: 'Haz clic en "Pedir", confirma tus datos y sigue el estado de tu impresión 3D en tiempo real.',
+      icon: ShoppingBag,
       color: 'from-purple-500 to-pink-500'
     }
   ];

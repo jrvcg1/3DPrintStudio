@@ -6,7 +6,7 @@ import { BusinessConfig } from '../types/config';
 export const INITIAL_CONFIG: BusinessConfig = {
   storeName: '3D Print Studio',
   whatsappNumber: '34600000000', // Modificable en el panel de administración
-  welcomeMessage: '¡Hola! Bienvenidos a 3D Print Studio. Haz tu pedido directo por WhatsApp.',
+  welcomeMessage: '¡Hola! Bienvenidos a 3D Print Studio. Haz tu pedido online con seguimiento en tiempo real.',
   announcementBanner: '🚀 ¡Envío gratis en todos los pedidos de más de 30€! Piezas impresas con PLA 100% Biodegradable.',
   isStoreActive: true,
   currencySymbol: '€',
@@ -239,7 +239,7 @@ export const INITIAL_FAQS: FAQItem[] = [
   {
     id: 'faq-1',
     question: '¿Cómo hago un pedido?',
-    answer: 'Es facilísimo: explora nuestro catálogo, elige el producto y color que te guste, pulsa en "Pedir por WhatsApp" y se abrirá tu chat con todo el resumen listo para enviar. Te responderemos en minutos para confirmar.',
+    answer: 'Es facilísimo: explora nuestro catálogo, elige el producto y color que te guste, pulsa en "Pedir" y confirma tus datos. Tu pedido quedará guardado en tu cuenta y podrás ver su estado en tiempo real.',
     category: 'general'
   },
   {

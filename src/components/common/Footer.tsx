@@ -72,7 +72,7 @@ export const Footer: React.FC<FooterProps> = ({ config, onNavigate }) => {
               </li>
               <li>
                 <button onClick={() => onNavigate('process')} className="hover:text-cyan-400 transition-colors">
-                  Cómo Pedir por WhatsApp
+                  Cómo Funciona el Pedido
                 </button>
               </li>
               <li>
@@ -85,7 +85,7 @@ export const Footer: React.FC<FooterProps> = ({ config, onNavigate }) => {
 
           {/* Categorías */}
           <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Categorías Popular</h3>
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Categorías Populares</h3>
             <ul className="space-y-2.5 text-sm">
               <li>
                 <button onClick={() => onNavigate('catalog')} className="hover:text-cyan-400 transition-colors">
@@ -118,7 +118,7 @@ export const Footer: React.FC<FooterProps> = ({ config, onNavigate }) => {
             </p>
             <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              Pedidos abiertos vía WhatsApp
+              Pedidos Online en Tiempo Real
             </div>
           </div>
         </div>
