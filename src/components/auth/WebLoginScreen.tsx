@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Loader, ArrowRight, ShieldCheck, Box, MessageSquare } from 'lucide-react';
+import { Sparkles, ArrowRight, Loader, Mail, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface WebLoginScreenProps {
@@ -7,8 +7,13 @@ interface WebLoginScreenProps {
 }
 
 export const WebLoginScreen: React.FC<WebLoginScreenProps> = ({ onContinueAsGuest }) => {
-  const { signInWithGoogle, authError, loading } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, authError, loading } = useAuth();
+  
+  const [authMode, setAuthMode] = useState<'google' | 'email_login' | 'email_signup'>('google');
   const [signingIn, setSigningIn] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
 
   const handleGoogleSignIn = async () => {
     setSigningIn(true);
@@ -19,74 +24,90 @@ export const WebLoginScreen: React.FC<WebLoginScreenProps> = ({ onContinueAsGues
     }
   };
 
+  const handleEmailAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) return;
+
+    setSigningIn(true);
+    try {
+      if (authMode === 'email_signup') {
+        await signUpWithEmail(email, password, displayName || 'Cliente 3D');
+      } else {
+        await signInWithEmail(email, password);
+      }
+    } catch (err) {
+      console.warn('Email auth error:', err);
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#0A0D14] flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden selection:bg-cyan-500 selection:text-[#0A0D14]">
+    <div className="min-h-screen bg-[#0A0D14] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      
+      {/* Glow Effects */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/3 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Decorative ambient background glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full filter blur-[120px] pointer-events-none -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-purple-600/10 rounded-full filter blur-[140px] pointer-events-none translate-x-1/3 translate-y-1/3" />
-
-      {/* Login Card */}
-      <div className="w-full max-w-md z-10 space-y-8 animate-fadeIn">
-
-        {/* Brand Logo & Header */}
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="relative group">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 p-0.5 shadow-2xl shadow-cyan-500/25 group-hover:scale-105 transition-transform duration-300">
-              <div className="w-full h-full bg-[#0A0D14] rounded-[22px] flex items-center justify-center">
-                <Box className="w-11 h-11 text-cyan-400 animate-pulse" />
-              </div>
+      <div className="w-full max-w-md glass-card p-8 rounded-3xl border border-white/20 shadow-2xl space-y-6 relative z-10 animate-fadeIn">
+        
+        {/* Brand Header */}
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-cyan-400 to-purple-600 p-[1.5px] shadow-lg shadow-cyan-500/20 mx-auto">
+            <div className="w-full h-full bg-[#0A0D14] rounded-[14px] flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-cyan-400 animate-pulse" />
             </div>
-            {/* Ambient glow */}
-            <div className="absolute inset-0 w-24 h-24 rounded-3xl bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 blur-xl -z-10" />
           </div>
 
           <div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+            <h1 className="text-2xl font-black text-white tracking-tight">
               3D Print <span className="text-gradient">Studio</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-2 font-medium">
-              Piezas y diseños 3D personalizados · Calidad Profesional
+            <p className="text-xs text-slate-400 mt-1">
+              Impresión 3D de alta precisión y productos personalizados
             </p>
-          </div>
-
-          {/* Feature Badges */}
-          <div className="flex flex-wrap justify-center gap-2 pt-1">
-            {['🖨️ Catálogo completo', '💬 Pedidos WhatsApp', '⚡ Tiempo real'].map(badge => (
-              <span
-                key={badge}
-                className="text-[11px] font-bold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 shadow-sm"
-              >
-                {badge}
-              </span>
-            ))}
           </div>
         </div>
 
-        {/* Form Container Card */}
-        <div className="glass-card rounded-3xl p-6 sm:p-8 border border-white/15 shadow-2xl space-y-6">
-          <div className="text-center space-y-1">
-            <h2 className="text-xl font-extrabold text-white">Acceso a la Plataforma</h2>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Comprobando sesión previa... Inicia sesión o regístrate con Google para gestionar tu catálogo y tus pedidos.
-            </p>
-          </div>
+        {/* Toggle Mode Tabs */}
+        <div className="w-full glass-card rounded-2xl p-1 border border-white/10 flex items-center gap-1">
+          <button
+            onClick={() => setAuthMode('google')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              authMode === 'google'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Google
+          </button>
+          <button
+            onClick={() => setAuthMode('email_login')}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              authMode === 'email_login' || authMode === 'email_signup'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Email
+          </button>
+        </div>
 
-          {/* Primary Action: Google Sign-In / Sign-Up */}
-          <div className="space-y-3">
+        {/* GOOGLE MODE */}
+        {authMode === 'google' && (
+          <div className="space-y-4">
             <button
               onClick={handleGoogleSignIn}
               disabled={signingIn || loading}
-              className="w-full flex items-center justify-center gap-3.5 px-6 py-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-900 font-extrabold text-sm transition-all duration-200 active:scale-98 disabled:opacity-60 disabled:cursor-not-allowed shadow-xl shadow-white/10"
+              className="w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-sm transition-all active:scale-95 shadow-xl shadow-white/10"
             >
               {signingIn ? (
                 <>
-                  <Loader className="w-5 h-5 animate-spin text-slate-600" />
-                  <span>Iniciando sesión...</span>
+                  <Loader className="w-5 h-5 animate-spin text-slate-500" />
+                  <span>Conectando con Google...</span>
                 </>
               ) : (
                 <>
-                  {/* Google SVG Logo */}
                   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -97,35 +118,95 @@ export const WebLoginScreen: React.FC<WebLoginScreenProps> = ({ onContinueAsGues
                 </>
               )}
             </button>
+          </div>
+        )}
 
-            {authError && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-medium">
-                <span>⚠️</span>
-                <span>{authError}</span>
+        {/* EMAIL MODE */}
+        {(authMode === 'email_login' || authMode === 'email_signup') && (
+          <form onSubmit={handleEmailAuthSubmit} className="space-y-3.5">
+            {authMode === 'email_signup' && (
+              <div>
+                <label className="text-[11px] font-bold text-slate-300 block mb-1">Nombre Completo:</label>
+                <input
+                  type="text"
+                  required
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  placeholder="Ej: Carlos Ruiz"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs focus:outline-none focus:border-cyan-400 font-medium"
+                />
               </div>
             )}
-          </div>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">o también</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
+            <div>
+              <label className="text-[11px] font-bold text-slate-300 block mb-1">Correo Electrónico:</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="tuemail@ejemplo.com"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs focus:outline-none focus:border-cyan-400 font-medium"
+              />
+            </div>
 
-          {/* Secondary Action: Guest Mode */}
-          <button
-            onClick={onContinueAsGuest}
-            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-bold text-xs sm:text-sm border border-white/10 transition-all active:scale-98"
-          >
-            <span>Explorar catálogo como invitado</span>
-            <ArrowRight className="w-4 h-4 text-cyan-400" />
-          </button>
+            <div>
+              <label className="text-[11px] font-bold text-slate-300 block mb-1">Contraseña:</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs focus:outline-none focus:border-cyan-400 font-medium"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={signingIn}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-extrabold text-xs shadow-lg shadow-cyan-500/20 active:scale-95 transition-all mt-2"
+            >
+              {signingIn ? 'Procesando...' : authMode === 'email_signup' ? 'Registrarse' : 'Iniciar Sesión'}
+            </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => setAuthMode(authMode === 'email_signup' ? 'email_login' : 'email_signup')}
+                className="text-xs text-cyan-400 font-bold hover:underline"
+              >
+                {authMode === 'email_signup' ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate gratis'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Error alert */}
+        {authError && (
+          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium">
+            <span>⚠️ {authError}</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-[11px] text-slate-500 font-medium">O</span>
+          <div className="flex-1 h-px bg-white/10" />
         </div>
 
-        {/* Footer info */}
-        <p className="text-[11px] text-slate-500 text-center leading-relaxed max-w-xs mx-auto">
-          Al identificarte aceptas nuestra política de privacidad. Tu cuenta Google solo se utiliza para autenticarnos y vincular tu perfil.
+        {/* Guest access */}
+        <button
+          onClick={onContinueAsGuest}
+          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-bold text-xs transition-all active:scale-95 hover:text-white"
+        >
+          <span>Explorar catálogo como invitado</span>
+          <ArrowRight className="w-4 h-4 text-cyan-400" />
+        </button>
+
+        <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+          Tus datos se emplean únicamente para identificarte y sincronizar tus pedidos 3D.
         </p>
       </div>
     </div>

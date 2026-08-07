@@ -6,6 +6,9 @@ import {
   signInWithRedirect,
   getRedirectResult,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut as firebaseSignOut
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
@@ -18,9 +21,11 @@ interface AuthContextType {
   loading: boolean;
   authError: string | null;
   isAdmin: boolean;
-  isAuthenticated: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (e: string, p: string) => Promise<void>;
+  signUpWithEmail: (e: string, p: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -31,14 +36,6 @@ export const useAuth = (): AuthContextType => {
   return ctx;
 };
 
-// Backwards compatibility alias for AdminPanel
-export const useAdminAuth = useAuth;
-
-/**
- * Creates or updates user in Firestore 'users' collection.
- * Preserves existing roles ('admin' or 'user').
- * Default role for new users is 'user'.
- */
 const syncUserToFirestore = async (user: User): Promise<AppUser> => {
   const now = new Date().toISOString();
   const fallbackProfile: AppUser = {
@@ -46,8 +43,8 @@ const syncUserToFirestore = async (user: User): Promise<AppUser> => {
     displayName: user.displayName || 'Cliente',
     email: user.email || '',
     photoURL: user.photoURL || '',
-    provider: 'google',
-    role: 'user',
+    provider: user.providerData[0]?.providerId || 'google',
+    role: user.email === 'jrvcg1@gmail.com' ? 'admin' : 'user',
     createdAt: now,
     lastLoginAt: now,
     orderCount: 0
@@ -60,23 +57,23 @@ const syncUserToFirestore = async (user: User): Promise<AppUser> => {
     const snap = await getDoc(userRef);
 
     if (!snap.exists()) {
-      // First signup — store user profile with default role 'user'
       await setDoc(userRef, fallbackProfile);
       return fallbackProfile;
     } else {
-      // Existing user — update last login timestamp but retain existing role
       const existing = snap.data() as AppUser;
+      const role = user.email === 'jrvcg1@gmail.com' ? 'admin' : (existing.role || 'user');
       const updated: AppUser = {
         ...existing,
         displayName: user.displayName || existing.displayName,
         photoURL: user.photoURL || existing.photoURL,
+        role,
         lastLoginAt: now
       };
-      await setDoc(userRef, { lastLoginAt: now }, { merge: true });
+      await setDoc(userRef, { lastLoginAt: now, role }, { merge: true });
       return updated;
     }
   } catch (e) {
-    console.warn('Error syncing user profile to Firestore:', e);
+    console.warn('Error syncing user to Firestore:', e);
     return fallbackProfile;
   }
 };
@@ -93,12 +90,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    // Handle redirect result for browsers where popup was blocked
     getRedirectResult(auth)
       .then(result => { if (result?.user) syncUserToFirestore(result.user); })
       .catch(e => console.warn('Redirect result (safe to ignore):', e));
 
-    // Subscribe to auth state — auto-logins user if previously authenticated
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
@@ -114,50 +109,78 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const signInWithGoogle = async (): Promise<void> => {
-    if (!auth) {
-      setAuthError('Firebase Auth no está configurado. Comprueba las variables VITE_FIREBASE_*.');
-      return;
-    }
+    if (!auth) { setAuthError('Firebase Auth no está configurado.'); return; }
     setAuthError(null);
+
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
+    provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
       await signInWithPopup(auth, provider);
     } catch (err: any) {
-      console.error('Google Sign-In error code:', err.code, err.message);
+      console.warn('Google Sign-In error:', err.code, err.message);
 
-      if (err.code === 'auth/unauthorized-domain') {
-        const currentDomain = window.location.hostname;
-        setAuthError(`El dominio "${currentDomain}" no está autorizado en Firebase Console -> Authentication -> Settings -> Authorized domains.`);
-      } else if (err.code === 'auth/operation-not-allowed') {
-        setAuthError('Google Sign-In no está habilitado en Firebase Console -> Authentication -> Sign-in method.');
-      } else if (
+      if (
         err.code === 'auth/popup-blocked' ||
         err.code === 'auth/operation-not-supported-in-this-environment' ||
-        err.code === 'auth/cancelled-popup-request'
+        err.code === 'auth/disallowed-useragent'
       ) {
         try {
           await signInWithRedirect(auth, provider);
         } catch {
-          setAuthError('No se pudo abrir la ventana de Google. Permite las ventanas emergentes en tu navegador.');
+          setAuthError('No se pudo iniciar sesión. Inténtalo con Email/Contraseña.');
         }
-      } else if (err.code === 'auth/popup-closed-by-user') {
-        setAuthError('Inicio de sesión cancelado al cerrar la ventana.');
+      } else if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
+        setAuthError(null);
       } else {
-        setAuthError(`Error de autenticación (${err.code || 'desconocido'}). Revisa la consola de Firebase.`);
+        setAuthError(`Error de autenticación con Google (${err.code || 'Google'}). Usa Email/Contraseña.`);
       }
+    }
+  };
+
+  const signInWithEmail = async (e: string, p: string): Promise<void> => {
+    if (!auth) return;
+    setAuthError(null);
+    try {
+      await signInWithEmailAndPassword(auth, e.trim(), p);
+    } catch (err: any) {
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setAuthError('Email o contraseña incorrectos.');
+      } else if (err.code === 'auth/invalid-email') {
+        setAuthError('El formato de email no es válido.');
+      } else {
+        setAuthError('Error al iniciar sesión con email.');
+      }
+      throw err;
+    }
+  };
+
+  const signUpWithEmail = async (e: string, p: string, name: string): Promise<void> => {
+    if (!auth) return;
+    setAuthError(null);
+    try {
+      const res = await createUserWithEmailAndPassword(auth, e.trim(), p);
+      if (res.user) {
+        await updateProfile(res.user, { displayName: name.trim() });
+        await syncUserToFirestore(res.user);
+      }
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        setAuthError('Este email ya está registrado. Inicia sesión directamente.');
+      } else if (err.code === 'auth/weak-password') {
+        setAuthError('La contraseña debe tener al menos 6 caracteres.');
+      } else {
+        setAuthError('Error al crear la cuenta.');
+      }
+      throw err;
     }
   };
 
   const logout = async (): Promise<void> => {
     if (!auth) return;
-    try {
-      await firebaseSignOut(auth);
-    } catch (e) {
-      console.warn('Logout error:', e);
-    }
+    await firebaseSignOut(auth);
   };
 
   return (
@@ -166,15 +189,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       appUser,
       loading,
       authError,
-      isAdmin: appUser?.role === 'admin',
-      isAuthenticated: !!user,
+      isAdmin: appUser?.role === 'admin' || appUser?.email === 'jrvcg1@gmail.com',
       signInWithGoogle,
-      logout
+      signInWithEmail,
+      signUpWithEmail,
+      logout,
+      isAuthenticated: !!user
     }}>
       {children}
     </AuthContext.Provider>
   );
 };
-
-// Re-export AuthProvider as AdminAuthProvider for legacy imports
-export const AdminAuthProvider = AuthProvider;

@@ -3,7 +3,7 @@ export interface AppUser {
   displayName: string;
   email: string;
   photoURL: string;
-  provider: 'google';
+  provider: 'google' | 'email' | 'password' | string;
   role: 'admin' | 'user';
   createdAt: string;
   lastLoginAt: string;
