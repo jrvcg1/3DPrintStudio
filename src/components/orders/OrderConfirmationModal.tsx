@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingBag, X, Check, ShieldCheck, Mail, Phone, MapPin, Truck, Sparkles } from 'lucide-react';
 import { Product, getProductSku } from '../../types/product';
 import { BusinessConfig } from '../../types/config';
@@ -14,7 +14,7 @@ interface OrderConfirmationModalProps {
   userDefaultName: string;
   userDefaultEmail: string;
   onClose: () => void;
-  onConfirm: (contactDetails: { userName: string; userEmail: string; contactPhone: string; shippingAddress: string }) => void;
+  onConfirm: (contactDetails: { userName: string; userEmail: string; contactPhone: string; shippingAddress: string }) => Promise<void> | void;
 }
 
 export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
@@ -29,13 +29,20 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   onClose,
   onConfirm
 }) => {
-  if (!isOpen || !product) return null;
-
   const [userName, setUserName] = useState(userDefaultName || '');
   const [userEmail, setUserEmail] = useState(userDefaultEmail || '');
   const [contactPhone, setContactPhone] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUserName(userDefaultName || userDefaultEmail?.split('@')[0] || 'Cliente');
+      setUserEmail(userDefaultEmail || '');
+    }
+  }, [isOpen, userDefaultName, userDefaultEmail]);
+
+  if (!isOpen || !product) return null;
 
   const productSku = getProductSku(product);
   const unitPrice = product.price;
@@ -43,18 +50,24 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   const shippingCost = subtotal >= (config.freeShippingThreshold || 30) ? 0 : (config.shippingCost || 3.95);
   const totalAmount = subtotal + shippingCost;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userName.trim() || !userEmail.trim()) return;
+    const nameToUse = userName.trim() || userDefaultName || userDefaultEmail?.split('@')[0] || 'Cliente';
+    const emailToUse = userEmail.trim() || userDefaultEmail || 'cliente@3dprintstudio.es';
 
     setSubmitting(true);
-    onConfirm({
-      userName: userName.trim(),
-      userEmail: userEmail.trim(),
-      contactPhone: contactPhone.trim(),
-      shippingAddress: shippingAddress.trim()
-    });
-    setSubmitting(false);
+    try {
+      await onConfirm({
+        userName: nameToUse,
+        userEmail: emailToUse,
+        contactPhone: contactPhone.trim(),
+        shippingAddress: shippingAddress.trim()
+      });
+    } catch (err) {
+      console.error('Error submitting order:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
