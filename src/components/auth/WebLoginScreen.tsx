@@ -118,6 +118,11 @@ export const WebLoginScreen: React.FC<WebLoginScreenProps> = ({ onContinueAsGues
                 </>
               )}
             </button>
+
+            <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs text-center leading-relaxed font-medium">
+              📱 <strong>¿Estás en la App Móvil de Android?</strong><br />
+              Google bloquea ventanas emergentes en WebViews. Usa la pestaña <button type="button" onClick={() => setAuthMode('email_login')} className="underline font-black text-white hover:text-cyan-200">Email</button> para acceder al instante sin restricciones.
+            </div>
           </div>
         )}
 

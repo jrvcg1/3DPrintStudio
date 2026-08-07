@@ -139,11 +139,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         err?.code === 'auth/disallowed-useragent' ||
         err?.code === 'auth/unauthorized-domain'
       ) {
-        setAuthError('Ventana emergente bloqueada por el navegador. Accede con Email/Contraseña.');
+        setAuthError('Google bloquea emergentes en Apps Android. Haz clic en la pestaña "Email" para iniciar sesión o registrarte.');
       } else if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
         setAuthError(null);
       } else {
-        setAuthError('No se pudo acceder con Google. Usa el formulario de Email/Contraseña.');
+        setAuthError('Para la App Móvil Android, usa el formulario de la pestaña "Email" (Email/Contraseña).');
       }
     }
   };
