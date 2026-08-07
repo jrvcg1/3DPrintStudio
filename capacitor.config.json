@@ -4,6 +4,8 @@
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
+    "url": "https://jrprintstudio.vercel.app",
+    "cleartext": true,
     "androidScheme": "https"
   },
   "plugins": {
