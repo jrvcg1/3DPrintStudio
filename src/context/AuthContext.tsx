@@ -3,6 +3,8 @@ import {
   User,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   onAuthStateChanged,
   signOut as firebaseSignOut
 } from 'firebase/auth';
@@ -91,6 +93,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    // Handle redirect result for browsers where popup was blocked
+    getRedirectResult(auth)
+      .then(result => { if (result?.user) syncUserToFirestore(result.user); })
+      .catch(e => console.warn('Redirect result (safe to ignore):', e));
+
     // Subscribe to auth state — auto-logins user if previously authenticated
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
@@ -108,18 +115,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async (): Promise<void> => {
     if (!auth) {
-      setAuthError('Firebase Auth no está configurado.');
+      setAuthError('Firebase Auth no está configurado. Comprueba las variables VITE_FIREBASE_*.');
       return;
     }
     setAuthError(null);
+    const provider = new GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+
     try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
       await signInWithPopup(auth, provider);
     } catch (err: any) {
-      console.error('Google Sign-In error:', err);
-      setAuthError('No se pudo iniciar sesión con Google. Inténtalo de nuevo.');
+      console.error('Google Sign-In error code:', err.code, err.message);
+
+      if (err.code === 'auth/unauthorized-domain') {
+        const currentDomain = window.location.hostname;
+        setAuthError(`El dominio "${currentDomain}" no está autorizado en Firebase Console -> Authentication -> Settings -> Authorized domains.`);
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setAuthError('Google Sign-In no está habilitado en Firebase Console -> Authentication -> Sign-in method.');
+      } else if (
+        err.code === 'auth/popup-blocked' ||
+        err.code === 'auth/operation-not-supported-in-this-environment' ||
+        err.code === 'auth/cancelled-popup-request'
+      ) {
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch {
+          setAuthError('No se pudo abrir la ventana de Google. Permite las ventanas emergentes en tu navegador.');
+        }
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setAuthError('Inicio de sesión cancelado al cerrar la ventana.');
+      } else {
+        setAuthError(`Error de autenticación (${err.code || 'desconocido'}). Revisa la consola de Firebase.`);
+      }
     }
   };
 
