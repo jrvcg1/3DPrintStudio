@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { Header } from './components/common/Header';
 import { Footer } from './components/common/Footer';
 import { FloatingWhatsAppButton } from './components/common/FloatingWhatsAppButton';
 import { Loader } from './components/common/Loader';
+import { WebLoginScreen } from './components/auth/WebLoginScreen';
 import { ProductDetailModal } from './components/product/ProductDetailModal';
 import { HomePage } from './pages/HomePage';
 import { CatalogPage } from './pages/CatalogPage';
@@ -39,6 +41,9 @@ import {
 } from './services/firebaseService';
 
 export const AppContent: React.FC = () => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [guestMode, setGuestMode] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
@@ -119,6 +124,21 @@ export const AppContent: React.FC = () => {
     await syncData();
   };
 
+  // Step 1: Checking previous Firebase session
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0D14] flex items-center justify-center">
+        <Loader text="Verificando sesión previa..." />
+      </div>
+    );
+  }
+
+  // Step 2: If user is NOT logged in and has NOT chosen guest mode, show Login/Signup screen
+  if (!isAuthenticated && !guestMode) {
+    return <WebLoginScreen onContinueAsGuest={() => setGuestMode(true)} />;
+  }
+
+  // Step 3: Loading shop data fallback
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0D14] flex items-center justify-center">
@@ -135,6 +155,7 @@ export const AppContent: React.FC = () => {
         currentTab={currentTab}
         onNavigate={handleNavigate}
         onOpenSearch={() => handleNavigate('catalog')}
+        onOpenLogin={() => setGuestMode(false)}
       />
 
       {/* Main View Router */}
@@ -214,7 +235,9 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
-          <AppContent />
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
         </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>
