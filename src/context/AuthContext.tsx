@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   updateProfile,
   setPersistence,
   browserLocalPersistence,
@@ -25,6 +26,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (e: string, p: string) => Promise<void>;
   signUpWithEmail: (e: string, p: string, name: string) => Promise<void>;
+  resetPasswordEmail: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -186,6 +188,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const resetPasswordEmail = async (e: string): Promise<void> => {
+    if (!auth || !e.trim()) return;
+    setAuthError(null);
+    try {
+      await sendPasswordResetEmail(auth, e.trim());
+    } catch (err: any) {
+      if (err?.code === 'auth/user-not-found') {
+        setAuthError('No existe ninguna cuenta registrada con este correo.');
+      } else {
+        setAuthError('Error al enviar el correo de restablecimiento.');
+      }
+      throw err;
+    }
+  };
+
   const logout = async (): Promise<void> => {
     if (!auth) return;
     await firebaseSignOut(auth);
@@ -201,6 +218,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       signInWithGoogle,
       signInWithEmail,
       signUpWithEmail,
+      resetPasswordEmail,
       logout,
       isAuthenticated: !!user
     }}>

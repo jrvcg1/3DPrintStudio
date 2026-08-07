@@ -7,10 +7,11 @@ interface WebLoginScreenProps {
 }
 
 export const WebLoginScreen: React.FC<WebLoginScreenProps> = ({ onContinueAsGuest }) => {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, authError, loading } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPasswordEmail, authError, loading } = useAuth();
   
   const [authMode, setAuthMode] = useState<'google' | 'email_login' | 'email_signup'>('google');
   const [signingIn, setSigningIn] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -19,6 +20,22 @@ export const WebLoginScreen: React.FC<WebLoginScreenProps> = ({ onContinueAsGues
     setSigningIn(true);
     try {
       await signInWithGoogle();
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      alert('Introduce tu correo electrónico arriba para enviarte el enlace.');
+      return;
+    }
+    setSigningIn(true);
+    try {
+      await resetPasswordEmail(email.trim());
+      setResetSent(true);
+    } catch {
+      // error handled in authError
     } finally {
       setSigningIn(false);
     }
@@ -176,14 +193,28 @@ export const WebLoginScreen: React.FC<WebLoginScreenProps> = ({ onContinueAsGues
               {signingIn ? 'Procesando...' : authMode === 'email_signup' ? 'Registrarse' : 'Iniciar Sesión'}
             </button>
 
-            <div className="text-center pt-1">
+            <div className="text-center pt-2 border-t border-white/10 space-y-2">
               <button
                 type="button"
                 onClick={() => setAuthMode(authMode === 'email_signup' ? 'email_login' : 'email_signup')}
-                className="text-xs text-cyan-400 font-bold hover:underline"
+                className="text-xs text-cyan-400 font-bold hover:underline block mx-auto"
               >
                 {authMode === 'email_signup' ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate gratis'}
               </button>
+
+              {resetSent ? (
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
+                  ✅ Correo enviado a {email}. Abre tu bandeja de entrada para crear/restablecer tu contraseña.
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  className="text-[11px] text-slate-400 hover:text-cyan-300 font-medium hover:underline block mx-auto pt-1"
+                >
+                  🔑 ¿Entraste antes con Google? Enviar email para crear una contraseña
+                </button>
+              )}
             </div>
           </form>
         )}
