@@ -3,14 +3,16 @@ import {
   doc,
   setDoc,
   updateDoc,
-  getDocs,
+  getDoc,
   onSnapshot,
   query,
   where,
-  orderBy
+  orderBy,
+  arrayUnion
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../config/firebase';
-import { Order, OrderStatus } from '../types/order';
+import { Order, OrderStatus, OrderMessage } from '../types/order';
+import { sendOrderStatusEmailNotification, sendNewMessageEmailNotification } from './emailService';
 
 const LOCAL_STORAGE_ORDERS_KEY = '3d_studio_orders';
 
@@ -63,6 +65,8 @@ export const checkAndApplyAutoReceive24h = async (orders: Order[]): Promise<Orde
               console.warn('Auto-receive Firestore update error:', e);
             }
           }
+          // Send notification email
+          sendOrderStatusEmailNotification(autoUpdated, 'received');
           return autoUpdated;
         }
       }
@@ -78,7 +82,7 @@ export const checkAndApplyAutoReceive24h = async (orders: Order[]): Promise<Orde
 };
 
 /**
- * Create a new order in Firestore
+ * Create a new order in Firestore & send confirmation email
  */
 export const createOrder = async (order: Order): Promise<void> => {
   if (isFirebaseConfigured && db) {
@@ -88,13 +92,17 @@ export const createOrder = async (order: Order): Promise<void> => {
       console.warn('Firebase order creation error, using local fallback:', e);
     }
   }
+
   const current = getLocalOrders();
   current.unshift(order);
   setLocalOrders(current);
+
+  // Send initial order confirmation email
+  sendOrderStatusEmailNotification(order, 'pending_approval');
 };
 
 /**
- * Update order status with timestamp updates
+ * Update order status with timestamp updates & dispatch email notification
  */
 export const updateOrderStatus = async (
   orderId: string,
@@ -111,9 +119,16 @@ export const updateOrderStatus = async (
   if (newStatus === 'delivered') updates.deliveredAt = now;
   if (newStatus === 'received') updates.receivedAt = now;
 
+  let targetOrder: Order | null = null;
+
   if (isFirebaseConfigured && db) {
     try {
-      await updateDoc(doc(db, 'orders', orderId), updates);
+      const ref = doc(db, 'orders', orderId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        targetOrder = { id: snap.id, ...snap.data() } as Order;
+      }
+      await updateDoc(ref, updates);
     } catch (e) {
       console.warn('Firebase order status update error:', e);
     }
@@ -122,8 +137,100 @@ export const updateOrderStatus = async (
   const current = getLocalOrders();
   const idx = current.findIndex(o => o.id === orderId);
   if (idx >= 0) {
+    if (!targetOrder) targetOrder = current[idx];
     current[idx] = { ...current[idx], ...updates };
     setLocalOrders(current);
+  }
+
+  // Trigger Email Notification on Status Change
+  if (targetOrder) {
+    const updatedOrderObj = { ...targetOrder, ...updates };
+    sendOrderStatusEmailNotification(updatedOrderObj, newStatus);
+  }
+};
+
+/**
+ * Send an in-app message / question on a specific order
+ */
+export const sendOrderMessage = async (
+  orderId: string,
+  senderId: string,
+  senderName: string,
+  senderRole: 'admin' | 'user',
+  text: string
+): Promise<void> => {
+  if (!text.trim()) return;
+
+  const now = new Date().toISOString();
+  const newMessage: OrderMessage = {
+    id: 'msg-' + Date.now(),
+    orderId,
+    senderId,
+    senderName,
+    senderRole,
+    text: text.trim(),
+    timestamp: now,
+    isReadByClient: senderRole === 'user',
+    isReadByAdmin: senderRole === 'admin'
+  };
+
+  let targetOrder: Order | null = null;
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const ref = doc(db, 'orders', orderId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        targetOrder = { id: snap.id, ...snap.data() } as Order;
+        const currentUnread = senderRole === 'admin'
+          ? (targetOrder.unreadClientMessagesCount || 0) + 1
+          : (targetOrder.unreadAdminMessagesCount || 0) + 1;
+
+        await updateDoc(ref, {
+          messages: arrayUnion(newMessage),
+          ...(senderRole === 'admin'
+            ? { unreadClientMessagesCount: currentUnread }
+            : { unreadAdminMessagesCount: currentUnread })
+        });
+      }
+    } catch (e) {
+      console.warn('Error sending order message to Firestore:', e);
+    }
+  }
+
+  // Local storage fallback
+  const current = getLocalOrders();
+  const idx = current.findIndex(o => o.id === orderId);
+  if (idx >= 0) {
+    if (!targetOrder) targetOrder = current[idx];
+    const msgs = current[idx].messages || [];
+    msgs.push(newMessage);
+    current[idx].messages = msgs;
+    setLocalOrders(current);
+  }
+
+  // If Admin sent the message, dispatch Email Notification to client
+  if (senderRole === 'admin' && targetOrder) {
+    sendNewMessageEmailNotification(targetOrder, newMessage);
+  }
+};
+
+/**
+ * Mark messages as read by role (admin or client)
+ */
+export const markOrderMessagesAsRead = async (
+  orderId: string,
+  role: 'admin' | 'user'
+): Promise<void> => {
+  if (isFirebaseConfigured && db) {
+    try {
+      const ref = doc(db, 'orders', orderId);
+      await updateDoc(ref, {
+        ...(role === 'admin' ? { unreadAdminMessagesCount: 0 } : { unreadClientMessagesCount: 0 })
+      });
+    } catch (e) {
+      console.warn('Error marking messages as read:', e);
+    }
   }
 };
 

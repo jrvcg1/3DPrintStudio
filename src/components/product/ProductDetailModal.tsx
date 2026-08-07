@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, Clock, Layers, ShieldCheck, Check, Sparkles, Plus, Minus, ShoppingBag, MessageSquare } from 'lucide-react';
+import { X, Clock, Layers, ShieldCheck, Check, Sparkles, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { Product, ProductColor, getProductSku } from '../../types/product';
 import { BusinessConfig } from '../../types/config';
 import { useAuth } from '../../context/AuthContext';
 import { createOrder } from '../../services/orderService';
 import { Order } from '../../types/order';
+import { OrderConfirmationModal } from '../orders/OrderConfirmationModal';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -32,6 +33,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       : product.customizationOptions?.colorOptions?.[0] || 'Estándar'
   );
   const [customText, setCustomText] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [ordering, setOrdering] = useState(false);
 
   const images = product.images && product.images.length > 0
@@ -44,12 +46,16 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const shippingCost = subtotal >= (config.freeShippingThreshold || 30) ? 0 : (config.shippingCost || 3.95);
   const totalAmount = subtotal + shippingCost;
 
-  const handlePlaceOrder = async () => {
+  const handleOpenConfirm = () => {
     if (!isAuthenticated || !user) {
       onRequireAuth();
       return;
     }
+    setShowConfirmModal(true);
+  };
 
+  const handleFinalConfirmOrder = async (contactDetails: { userName: string; userEmail: string; contactPhone: string; shippingAddress: string }) => {
+    if (!user) return;
     setOrdering(true);
     try {
       const orderId = 'ord-' + Date.now();
@@ -58,8 +64,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         id: orderId,
         orderNumber,
         userId: user.uid,
-        userName: appUser?.displayName || user.displayName || 'Cliente 3D',
-        userEmail: appUser?.email || user.email || '',
+        userName: contactDetails.userName,
+        userEmail: contactDetails.userEmail,
+        contactPhone: contactDetails.contactPhone,
+        shippingAddress: contactDetails.shippingAddress,
         items: [
           {
             productId: product.id,
@@ -82,6 +90,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       };
 
       await createOrder(newOrder);
+      setShowConfirmModal(false);
       onOrderSuccess(newOrder);
       onClose();
     } catch (err) {
@@ -92,200 +101,205 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-      <div className="relative w-full max-w-4xl glass-card rounded-3xl overflow-hidden shadow-2xl border border-white/20 my-8">
-        
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          aria-label="Cerrar"
-          className="absolute top-4 right-4 z-20 p-2.5 rounded-2xl bg-slate-900/80 text-slate-400 hover:text-white border border-white/10 hover:bg-white/10 transition-all"
-        >
-          <X className="w-5 h-5" />
-        </button>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl overflow-y-auto animate-fadeIn">
+        <div className="relative w-full max-w-4xl glass-card rounded-3xl overflow-hidden shadow-2xl border border-white/20 my-8">
+          
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-slate-950/60 text-slate-400 hover:text-white border border-white/10 backdrop-blur-md transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          {/* Left Column: Gallery */}
-          <div className="p-6 bg-slate-900/50 flex flex-col justify-between gap-4 border-b md:border-b-0 md:border-r border-white/10">
-            <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-950 border border-white/10">
-              <img
-                src={images[activeImageIndex]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-              {product.isFeatured && (
-                <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[11px] font-extrabold uppercase tracking-wider shadow-lg flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5" /> Destacado
-                </span>
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Gallery Column */}
+            <div className="p-6 bg-slate-950/40 border-b md:border-b-0 md:border-r border-white/10 flex flex-col justify-between space-y-4">
+              <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-white/10 shadow-inner group">
+                <img
+                  src={images[activeImageIndex]}
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-cyan-500/30 text-[11px] font-mono font-bold text-cyan-300">
+                  {productSku}
+                </div>
+              </div>
+
+              {/* Thumbnails */}
+              {images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
+                        activeImageIndex === idx ? 'border-cyan-400 scale-105' : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
-            {images.length > 1 && (
-              <div className="flex items-center gap-3 overflow-x-auto pb-1">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIndex(idx)}
-                    className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
-                      activeImageIndex === idx ? 'border-cyan-400 scale-105' : 'border-white/10 opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Right Column: Customization & Order Form */}
-          <div className="p-6 md:p-8 flex flex-col justify-between gap-6 max-h-[85vh] overflow-y-auto">
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-widest text-cyan-400">
-                    {product.category}
-                  </span>
-                  <span className="text-[11px] px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-300 font-mono font-bold border border-white/10">
-                    {productSku}
-                  </span>
-                </div>
-              </div>
-
-              <h2 className="text-2xl font-extrabold text-white leading-tight">
-                {product.name}
-              </h2>
-
-              {/* Price & Quantity Calculation */}
-              <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-3xl font-black text-white">
-                  {unitPrice.toFixed(2)}€
-                </span>
-                <span className="text-xs text-slate-400">/ unidad (IVA incl.)</span>
-              </div>
-
-              {/* Specifications */}
-              <div className="grid grid-cols-2 gap-3 my-5">
-                <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-blue-400 shrink-0" />
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Impresión</span>
-                    <span className="text-xs font-semibold text-slate-200">{product.printTime}</span>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
-                  <Layers className="w-5 h-5 text-cyan-400 shrink-0" />
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Material</span>
-                    <span className="text-xs font-semibold text-slate-200">{product.material}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Customization: Color selector */}
-              {(product.colors && product.colors.length > 0) || (product.customizationOptions?.colorOptions && product.customizationOptions.colorOptions.length > 0) ? (
-                <div className="mt-4">
-                  <label className="text-xs font-extrabold uppercase text-slate-300 tracking-wider block mb-2">
-                    Color deseado: <span className="text-cyan-400 font-bold">{selectedColor}</span>
-                  </label>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {(product.colors?.map(c => c.name) || product.customizationOptions?.colorOptions || ['Estándar']).map(colName => (
-                      <button
-                        key={colName}
-                        type="button"
-                        onClick={() => setSelectedColor(colName)}
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
-                          selectedColor === colName
-                            ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 ring-2 ring-cyan-500/30'
-                            : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
-                        }`}
-                      >
-                        {colName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Customization: Text input */}
-              {(product.isCustomizable || product.customizationOptions?.allowsText) && (
-                <div className="mt-4">
-                  <label className="text-xs font-extrabold uppercase text-slate-300 tracking-wider block mb-1.5">
-                    Texto personalizado a grabar (Opcional):
-                  </label>
-                  <input
-                    type="text"
-                    value={customText}
-                    onChange={e => setCustomText(e.target.value)}
-                    placeholder="Ej: MARÍA, iniciales o dedicatoria..."
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-bold uppercase"
-                  />
-                </div>
-              )}
-
-              {/* Quantity Selector */}
-              <div className="mt-5 p-4 rounded-2xl bg-slate-900/60 border border-white/10 flex items-center justify-between">
+            {/* Product Info Column */}
+            <div className="p-6 md:p-8 flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <span className="text-xs font-extrabold text-white block uppercase tracking-wider">Número de copias:</span>
-                  <span className="text-[11px] text-slate-400">Selecciona cuántas piezas deseas pedir</span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-extrabold uppercase text-cyan-400 tracking-wider">
+                      {product.category}
+                    </span>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-xs text-slate-400 flex items-center gap-1 font-semibold">
+                      <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                      Impresión: {product.printTime}
+                    </span>
+                  </div>
+
+                  <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">
+                    {product.name}
+                  </h2>
+                  <p className="text-2xl font-black text-white mt-2">
+                    {unitPrice.toFixed(2)}€
+                  </p>
                 </div>
-                <div className="flex items-center gap-3 bg-slate-950 px-3 py-1.5 rounded-xl border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="text-base font-black text-white w-6 text-center">{quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity(q => q + 1)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
+
+                <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                  {product.longDescription || product.description}
+                </p>
+
+                {/* Technical Specs Badges */}
+                <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                    <span className="text-slate-400 text-[10px] uppercase font-bold block">Material:</span>
+                    <span className="text-slate-200 font-semibold">{product.material}</span>
+                  </div>
+                  {product.dimensions && (
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                      <span className="text-slate-400 text-[10px] uppercase font-bold block">Dimensiones:</span>
+                      <span className="text-slate-200 font-semibold">{product.dimensions}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Customization Controls */}
+                <div className="glass-card p-4 rounded-2xl space-y-3.5 border border-cyan-500/20">
+                  <h4 className="text-xs font-extrabold text-cyan-300 uppercase tracking-wider">
+                    Personaliza tu pieza 3D
+                  </h4>
+
+                  {/* Color selector */}
+                  {product.colors && product.colors.length > 0 && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1.5">Color de filamento:</label>
+                      <div className="flex flex-wrap gap-2">
+                        {product.colors.map(c => (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => setSelectedColor(c.name)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                              selectedColor === c.name
+                                ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-md scale-105'
+                                : 'bg-slate-900/60 border-white/10 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            <span className="w-3 h-3 rounded-full border border-white/20" style={{ backgroundColor: c.hex }} />
+                            <span>{c.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Custom Text input */}
+                  {product.isCustomizable && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                        Texto grabado personalizado:
+                      </label>
+                      <input
+                        type="text"
+                        value={customText}
+                        onChange={e => setCustomText(e.target.value)}
+                        placeholder="Ej: MARÍA, iniciales o grabado..."
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-bold uppercase"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Quantity selector */}
+                <div className="flex items-center justify-between glass-pill p-3 rounded-2xl">
+                  <span className="text-xs font-bold text-slate-300">Número de copias:</span>
+                  <div className="flex items-center gap-3 bg-slate-950 px-3 py-1.5 rounded-xl border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm font-black text-white w-5 text-center">{quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(q => q + 1)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Price breakdown */}
+                <div className="p-3 rounded-2xl bg-cyan-950/20 border border-cyan-500/20 space-y-1 text-xs">
+                  <div className="flex justify-between text-slate-300">
+                    <span>Subtotal piezas ({quantity}):</span>
+                    <span className="font-bold text-white">{subtotal.toFixed(2)}€</span>
+                  </div>
+                  <div className="flex justify-between text-slate-300">
+                    <span>Envío:</span>
+                    <span className="font-bold text-emerald-400">{shippingCost === 0 ? 'Gratis (>30€)' : `${shippingCost.toFixed(2)}€`}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-white/10 font-black text-sm text-white">
+                    <span>Total a pagar:</span>
+                    <span className="text-cyan-300">{totalAmount.toFixed(2)}€</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Summary box */}
-              <div className="mt-4 p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs space-y-1">
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Subtotal ({quantity} {quantity === 1 ? 'unidad' : 'unidades'}):</span>
-                  <span className="font-bold text-white">{subtotal.toFixed(2)}€</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Envío:</span>
-                  <span className="font-bold text-emerald-400">{shippingCost === 0 ? '¡Gratis!' : `${shippingCost.toFixed(2)}€`}</span>
-                </div>
-                <div className="flex items-center justify-between pt-1 border-t border-cyan-500/20 font-black text-sm text-white">
-                  <span>Total Pedido:</span>
-                  <span className="text-cyan-300 text-base">{totalAmount.toFixed(2)}€</span>
-                </div>
+              {/* ACTION BUTTON */}
+              <div className="pt-2">
+                <button
+                  onClick={handleOpenConfirm}
+                  className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 text-white font-black text-sm shadow-xl shadow-cyan-500/25 flex items-center justify-center gap-2 hover:scale-102 active:scale-98 transition-all"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  <span>Realizar Pedido en la Web</span>
+                </button>
               </div>
             </div>
-
-            {/* Action CTA Button */}
-            <div className="pt-2 border-t border-white/10 space-y-2">
-              <button
-                onClick={handlePlaceOrder}
-                disabled={ordering}
-                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 text-white font-extrabold text-base shadow-xl shadow-cyan-500/25 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                <span>{ordering ? 'Procesando pedido...' : 'Realizar Pedido en la Web'}</span>
-              </button>
-
-              <p className="text-[11px] text-center text-slate-400 flex items-center justify-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                El pedido pasará a revisión del admin. Pago por Bizum tras aceptación.
-              </p>
-            </div>
-
           </div>
         </div>
-
       </div>
-    </div>
+
+      {/* ORDER CONFIRMATION MODAL */}
+      <OrderConfirmationModal
+        isOpen={showConfirmModal}
+        product={product}
+        quantity={quantity}
+        selectedColor={selectedColor}
+        customText={customText}
+        config={config}
+        userDefaultName={appUser?.displayName || user?.displayName || ''}
+        userDefaultEmail={appUser?.email || user?.email || ''}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleFinalConfirmOrder}
+      />
+    </>
   );
 };

@@ -3,7 +3,7 @@ import {
   Plus, Edit, Trash2, ShieldCheck, Box, RefreshCw, Download, Settings,
   Eye, EyeOff, Save, CheckCircle2, AlertTriangle, Layers, MessageSquare,
   Sparkles, Image as ImageIcon, Phone, Users, Mail, Calendar, Clock, UserX, Crown, LogOut,
-  ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter
+  ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter, MapPin
 } from 'lucide-react';
 import { ADMIN_PASSWORD } from '../../config/admin';
 import { Product, ProductColor, getProductSku } from '../../types/product';
@@ -16,6 +16,7 @@ import { subscribeAllOrders, updateOrderStatus } from '../../services/orderServi
 import { useToast } from '../../context/ToastContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { MakerWorldImportModal } from './MakerWorldImportModal';
+import { OrderChatModal } from '../orders/OrderChatModal';
 
 interface AdminPanelProps {
   products: Product[];
@@ -52,9 +53,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [newCatName, setNewCatName] = useState('');
   const [newCatDescription, setNewCatDescription] = useState('');
 
-  // Real-time Orders state
+  // Real-time Orders & Chat state
   const [liveOrders, setLiveOrders] = useState<Order[]>(initialOrders || []);
   const [orderFilter, setOrderFilter] = useState<'all' | OrderStatus>('all');
+  const [chatOrder, setChatOrder] = useState<Order | null>(null);
 
   // Users management state
   const [users, setUsers] = useState<AppUser[]>([]);
@@ -238,7 +240,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     await updateOrderStatus(orderId, newStatus);
-    showToast('Estado del pedido actualizado', 'success');
+    showToast('Estado del pedido actualizado y correo de notificación enviado', 'success');
   };
 
   // Filtered orders list
@@ -248,6 +250,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   });
 
   const pendingApprovalCount = liveOrders.filter(o => o.status === 'pending_approval').length;
+  const totalUnreadAdminMessages = liveOrders.reduce((acc, o) => acc + (o.unreadAdminMessagesCount || 0), 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -264,7 +267,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               Panel de Control <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">Administrador</span>
             </h1>
             <p className="text-xs text-slate-300 mt-1">
-              Gestiona los pedidos de la web, productos, usuarios y Bizum en tiempo real.
+              Gestiona los pedidos de la web, mensajes en tiempo real, notificaciones por email y Bizum.
             </p>
           </div>
         </div>
@@ -305,6 +308,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {pendingApprovalCount > 0 && (
             <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-black text-[10px] animate-pulse">
               {pendingApprovalCount} nuevos
+            </span>
+          )}
+          {totalUnreadAdminMessages > 0 && (
+            <span className="ml-1 px-1.5 py-0.2 rounded-full bg-cyan-400 text-slate-950 font-black text-[10px] animate-pulse flex items-center gap-0.5">
+              <MessageSquare className="w-2.5 h-2.5" /> {totalUnreadAdminMessages}
             </span>
           )}
         </button>
@@ -358,7 +366,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </button>
       </div>
 
-      {/* TAB: ORDERS MANAGER (MAIN REQUIREMENT) */}
+      {/* TAB: ORDERS MANAGER */}
       {activeTab === 'orders' && (
         <div className="space-y-6">
           {/* Status Filter Chips */}
@@ -402,127 +410,158 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredOrders.map(ord => (
-                <div
-                  key={ord.id}
-                  className="glass-card rounded-3xl p-5 border border-white/10 space-y-4 hover:border-amber-500/30 transition-all shadow-xl"
-                >
-                  {/* Order Top Bar */}
-                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-black text-amber-300 px-2.5 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30">
-                        {ord.orderNumber}
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        {new Date(ord.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </span>
+              {filteredOrders.map(ord => {
+                const unreadAdminCount = ord.unreadAdminMessagesCount || 0;
+                return (
+                  <div
+                    key={ord.id}
+                    className="glass-card rounded-3xl p-5 border border-white/10 space-y-4 hover:border-amber-500/30 transition-all shadow-xl"
+                  >
+                    {/* Order Top Bar */}
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-black text-amber-300 px-2.5 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30">
+                          {ord.orderNumber}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">
+                          {new Date(ord.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setChatOrder(ord)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all relative"
+                          title="Responder cliente o enviar dudas"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Chat Cliente</span>
+                          {unreadAdminCount > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-cyan-400 text-slate-950 font-black text-[10px] animate-pulse">
+                              {unreadAdminCount}
+                            </span>
+                          )}
+                        </button>
+
+                        <AdminStatusBadge status={ord.status} />
+                      </div>
                     </div>
 
-                    <AdminStatusBadge status={ord.status} />
-                  </div>
-
-                  {/* Customer Info */}
-                  <div className="bg-slate-900/60 p-3 rounded-2xl border border-white/5 space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Cliente:</span>
-                      <span className="font-bold text-white">{ord.userName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Email:</span>
-                      <span className="text-slate-300 truncate max-w-[200px]">{ord.userEmail}</span>
-                    </div>
-                  </div>
-
-                  {/* Order Items */}
-                  <div className="space-y-2">
-                    {ord.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
-                        {item.productImage && (
-                          <img src={item.productImage} alt="" className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-extrabold text-white text-xs truncate">{item.productName}</p>
-                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                            <span>Cant: <strong className="text-white">{item.quantity}</strong></span>
-                            {item.selectedColor && (
-                              <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-cyan-300">
-                                Color: {item.selectedColor}
-                              </span>
-                            )}
-                            {item.customText && (
-                              <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-purple-300 uppercase">
-                                Texto: "{item.customText}"
-                              </span>
-                            )}
-                          </div>
+                    {/* Customer Info */}
+                    <div className="bg-slate-900/60 p-3 rounded-2xl border border-white/5 space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Cliente:</span>
+                        <span className="font-bold text-white">{ord.userName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Email:</span>
+                        <span className="text-slate-300 truncate max-w-[200px]">{ord.userEmail}</span>
+                      </div>
+                      {ord.contactPhone && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Teléfono:</span>
+                          <span className="text-cyan-300 font-mono font-bold">{ord.contactPhone}</span>
                         </div>
-                        <span className="font-black text-white text-xs">{item.totalPrice.toFixed(2)}€</span>
-                      </div>
-                    ))}
+                      )}
+                      {ord.shippingAddress && (
+                        <div className="flex justify-between border-t border-white/5 pt-1">
+                          <span className="text-slate-400">Dirección:</span>
+                          <span className="text-slate-200 truncate max-w-[220px]">{ord.shippingAddress}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Order Items */}
+                    <div className="space-y-2">
+                      {ord.items.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
+                          {item.productImage && (
+                            <img src={item.productImage} alt="" className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-extrabold text-white text-xs truncate">{item.productName}</p>
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                              <span>Cant: <strong className="text-white">{item.quantity}</strong></span>
+                              {item.selectedColor && (
+                                <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-cyan-300">
+                                  Color: {item.selectedColor}
+                                </span>
+                              )}
+                              {item.customText && (
+                                <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-purple-300 uppercase">
+                                  Texto: "{item.customText}"
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="font-black text-white text-xs">{item.totalPrice.toFixed(2)}€</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Amount summary */}
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="text-slate-400">Importe Total:</span>
+                      <span className="text-lg font-black text-amber-300">{ord.totalAmount.toFixed(2)}€</span>
+                    </div>
+
+                    {/* ADMIN TRANSITION ACTION BUTTONS */}
+                    <div className="pt-2 border-t border-white/10">
+                      {ord.status === 'pending_approval' && (
+                        <button
+                          onClick={() => handleStatusChange(ord.id, 'pending_payment')}
+                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>Aceptar Pedido (Solicitar Pago Bizum)</span>
+                        </button>
+                      )}
+
+                      {ord.status === 'pending_payment' && (
+                        <button
+                          onClick={() => handleStatusChange(ord.id, 'in_production')}
+                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          <span>Confirmar Pago Bizum e Iniciar Fabricación</span>
+                        </button>
+                      )}
+
+                      {ord.status === 'in_production' && (
+                        <button
+                          onClick={() => handleStatusChange(ord.id, 'completed_pending_delivery')}
+                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                        >
+                          <Package className="w-4 h-4" />
+                          <span>Finalizado / Listo para Entrega</span>
+                        </button>
+                      )}
+
+                      {ord.status === 'completed_pending_delivery' && (
+                        <button
+                          onClick={() => handleStatusChange(ord.id, 'delivered')}
+                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                        >
+                          <Truck className="w-4 h-4" />
+                          <span>Marcar como Entregado (Inicia timer 24h)</span>
+                        </button>
+                      )}
+
+                      {ord.status === 'delivered' && (
+                        <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-center text-xs text-teal-300 font-bold">
+                          🚚 Entregado · Esperando confirmación del cliente (Auto-recibido en 24h)
+                        </div>
+                      )}
+
+                      {ord.status === 'received' && (
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-xs text-emerald-300 font-bold">
+                          ✅ Pedido completado y Recibido por el cliente
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Amount summary */}
-                  <div className="flex items-center justify-between text-xs pt-1">
-                    <span className="text-slate-400">Importe Total:</span>
-                    <span className="text-lg font-black text-amber-300">{ord.totalAmount.toFixed(2)}€</span>
-                  </div>
-
-                  {/* ADMIN TRANSITION ACTION BUTTONS */}
-                  <div className="pt-2 border-t border-white/10">
-                    {ord.status === 'pending_approval' && (
-                      <button
-                        onClick={() => handleStatusChange(ord.id, 'pending_payment')}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                      >
-                        <Check className="w-4 h-4" />
-                        <span>Aceptar Pedido (Solicitar Pago Bizum)</span>
-                      </button>
-                    )}
-
-                    {ord.status === 'pending_payment' && (
-                      <button
-                        onClick={() => handleStatusChange(ord.id, 'in_production')}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        <span>Confirmar Pago Bizum e Iniciar Fabricación</span>
-                      </button>
-                    )}
-
-                    {ord.status === 'in_production' && (
-                      <button
-                        onClick={() => handleStatusChange(ord.id, 'completed_pending_delivery')}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                      >
-                        <Package className="w-4 h-4" />
-                        <span>Finalizado / Listo para Entrega</span>
-                      </button>
-                    )}
-
-                    {ord.status === 'completed_pending_delivery' && (
-                      <button
-                        onClick={() => handleStatusChange(ord.id, 'delivered')}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                      >
-                        <Truck className="w-4 h-4" />
-                        <span>Marcar como Entregado (Inicia timer 24h)</span>
-                      </button>
-                    )}
-
-                    {ord.status === 'delivered' && (
-                      <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-center text-xs text-teal-300 font-bold">
-                        🚚 Entregado · Esperando confirmación del cliente (Auto-recibido en 24h)
-                      </div>
-                    )}
-
-                    {ord.status === 'received' && (
-                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-xs text-emerald-300 font-bold">
-                        ✅ Pedido completado y Recibido por el cliente
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1030,6 +1069,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           setEditingProduct(draftProduct);
           setIsFormOpen(true);
         }}
+      />
+
+      {/* REAL-TIME ORDER CHAT MODAL */}
+      <OrderChatModal
+        isOpen={!!chatOrder}
+        order={chatOrder}
+        onClose={() => setChatOrder(null)}
       />
     </div>
   );

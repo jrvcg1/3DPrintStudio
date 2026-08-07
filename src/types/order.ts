@@ -19,12 +19,26 @@ export interface OrderItem {
   totalPrice: number;
 }
 
+export interface OrderMessage {
+  id: string;
+  orderId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'admin' | 'user';
+  text: string;
+  timestamp: string;
+  isReadByClient?: boolean;
+  isReadByAdmin?: boolean;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;          // Ej: #ORD-1042
   userId: string;
   userName: string;
   userEmail: string;
+  contactPhone?: string;
+  shippingAddress?: string;
   items: OrderItem[];
   subtotal: number;
   shippingCost: number;
@@ -39,4 +53,7 @@ export interface Order {
   receivedAt?: string;
   userReviewSubmitted?: boolean;
   notes?: string;
+  messages?: OrderMessage[];
+  unreadClientMessagesCount?: number;
+  unreadAdminMessagesCount?: number;
 }

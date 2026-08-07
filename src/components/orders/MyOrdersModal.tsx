@@ -8,15 +8,16 @@ import {
   Truck,
   CreditCard,
   Star,
-  ChevronRight,
   AlertCircle,
   Copy,
-  Check
+  Check,
+  MessageSquare
 } from 'lucide-react';
 import { Order, OrderStatus } from '../../types/order';
 import { useAuth } from '../../context/AuthContext';
 import { subscribeUserOrders, updateOrderStatus } from '../../services/orderService';
 import { RatingModal } from './RatingModal';
+import { OrderChatModal } from './OrderChatModal';
 import { Review } from '../../types/faq';
 
 interface MyOrdersModalProps {
@@ -34,6 +35,7 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
   const [orders, setOrders] = useState<Order[]>([]);
   const [copiedBizum, setCopiedBizum] = useState<string | null>(null);
   const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
+  const [chatOrder, setChatOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     if (!isOpen || !user?.uid) return;
@@ -70,7 +72,7 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
               </div>
               <div>
                 <h2 className="text-lg font-black text-white">Mis Pedidos 3D</h2>
-                <p className="text-xs text-slate-400">Estado en tiempo real de tus compras</p>
+                <p className="text-xs text-slate-400">Estado en tiempo real de tus compras y chat directo</p>
               </div>
             </div>
 
@@ -95,75 +97,94 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
                 </p>
               </div>
             ) : (
-              orders.map((ord) => (
-                <div
-                  key={ord.id}
-                  className="glass-card rounded-3xl p-5 border border-white/10 space-y-4 hover:border-cyan-500/30 transition-all shadow-lg"
-                >
-                  {/* Order Header */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
-                    <div>
+              orders.map((ord) => {
+                const unreadCount = ord.unreadClientMessagesCount || 0;
+                return (
+                  <div
+                    key={ord.id}
+                    className="glass-card rounded-3xl p-5 border border-white/10 space-y-4 hover:border-cyan-500/30 transition-all shadow-lg"
+                  >
+                    {/* Order Header */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-black text-cyan-300 px-2.5 py-0.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30">
+                            {ord.orderNumber}
+                          </span>
+                          <span className="text-xs text-slate-400 font-medium">
+                            {new Date(ord.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-black text-cyan-300 px-2.5 py-0.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30">
-                          {ord.orderNumber}
-                        </span>
-                        <span className="text-xs text-slate-400 font-medium">
-                          {new Date(ord.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </span>
+                        <button
+                          onClick={() => setChatOrder(ord)}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 text-xs font-bold transition-all relative"
+                          title="Consultar dudas o enviar mensajes"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Mensajes</span>
+                          {unreadCount > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-cyan-400 text-slate-950 font-black text-[10px] animate-pulse">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </button>
+
+                        <StatusBadge status={ord.status} />
                       </div>
                     </div>
 
-                    <StatusBadge status={ord.status} />
-                  </div>
-
-                  {/* Order Items List */}
-                  <div className="space-y-3">
-                    {ord.items.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-slate-900/40 p-3 rounded-2xl border border-white/5">
-                        {item.productImage ? (
-                          <img src={item.productImage} alt={item.productName} className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-xs text-slate-400 font-bold">3D</div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-extrabold text-white text-xs truncate">{item.productName}</p>
-                          <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-slate-400">
-                            <span>Cant: <strong className="text-white">{item.quantity}</strong></span>
-                            {item.selectedColor && (
-                              <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-cyan-300">
-                                Color: {item.selectedColor}
-                              </span>
-                            )}
-                            {item.customText && (
-                              <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-purple-300 uppercase">
-                                Texto: "{item.customText}"
-                              </span>
-                            )}
+                    {/* Order Items List */}
+                    <div className="space-y-3">
+                      {ord.items.map((item, i) => (
+                        <div key={i} className="flex items-center gap-3 bg-slate-900/40 p-3 rounded-2xl border border-white/5">
+                          {item.productImage ? (
+                            <img src={item.productImage} alt={item.productName} className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-xs text-slate-400 font-bold">3D</div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-extrabold text-white text-xs truncate">{item.productName}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-slate-400">
+                              <span>Cant: <strong className="text-white">{item.quantity}</strong></span>
+                              {item.selectedColor && (
+                                <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-cyan-300">
+                                  Color: {item.selectedColor}
+                                </span>
+                              )}
+                              {item.customText && (
+                                <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-purple-300 uppercase">
+                                  Texto: "{item.customText}"
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-black text-white">{item.totalPrice.toFixed(2)}€</span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs font-black text-white">{item.totalPrice.toFixed(2)}€</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
 
-                  {/* Payment / Status Step Action Box */}
-                  <StatusActionBox
-                    order={ord}
-                    copiedBizum={copiedBizum}
-                    onCopy={copyToClipboard}
-                    onConfirmReceived={handleConfirmReceived}
-                    onOpenRating={(o) => setRatingOrder(o)}
-                  />
+                    {/* Payment / Status Step Action Box */}
+                    <StatusActionBox
+                      order={ord}
+                      copiedBizum={copiedBizum}
+                      onCopy={copyToClipboard}
+                      onConfirmReceived={handleConfirmReceived}
+                      onOpenRating={(o) => setRatingOrder(o)}
+                    />
 
-                  {/* Footer Total */}
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
-                    <span className="text-slate-400">Total (Envío: {ord.shippingCost > 0 ? `${ord.shippingCost}€` : 'Gratis'}):</span>
-                    <span className="text-base font-black text-white">{ord.totalAmount.toFixed(2)}€</span>
+                    {/* Footer Total */}
+                    <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
+                      <span className="text-slate-400">Total (Envío: {ord.shippingCost > 0 ? `${ord.shippingCost}€` : 'Gratis'}):</span>
+                      <span className="text-base font-black text-white">{ord.totalAmount.toFixed(2)}€</span>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -179,6 +200,13 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
           setOrders(prev => prev.map(o => o.id === ratingOrder?.id ? { ...o, userReviewSubmitted: true } : o));
         }}
       />
+
+      {/* Real-time Order Chat Modal */}
+      <OrderChatModal
+        isOpen={!!chatOrder}
+        order={chatOrder}
+        onClose={() => setChatOrder(null)}
+      />
     </>
   );
 };
@@ -189,13 +217,13 @@ const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
     case 'pending_approval':
       return (
         <span className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5" /> Pendiente de Aceptación
+          <Clock className="w-3.5 h-3.5" /> Pendiente Aceptación
         </span>
       );
     case 'pending_payment':
       return (
         <span className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-blue-500/15 text-blue-300 border border-blue-500/30 flex items-center gap-1.5 animate-pulse">
-          <CreditCard className="w-3.5 h-3.5" /> Pendiente de Pago
+          <CreditCard className="w-3.5 h-3.5" /> Pendiente Pago
         </span>
       );
     case 'in_production':
@@ -207,7 +235,7 @@ const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
     case 'completed_pending_delivery':
       return (
         <span className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
-          <Truck className="w-3.5 h-3.5 text-indigo-400" /> Listo para Entrega
+          <Truck className="w-3.5 h-3.5 text-indigo-400" /> Listo Entrega
         </span>
       );
     case 'delivered':
