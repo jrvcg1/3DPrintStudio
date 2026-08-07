@@ -1,0 +1,16 @@
+{
+  "appId": "com.studio3dprint.app",
+  "appName": "3D Print Studio",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#090d16",
+      "showSpinner": false
+    }
+  }
+}

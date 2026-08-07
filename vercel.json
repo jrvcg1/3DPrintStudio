@@ -1,20 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/releases/(.*)",
-      "destination": "/releases/$1"
-    },
-    {
-      "source": "/setup-first-admin.html",
-      "destination": "/setup-first-admin.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
