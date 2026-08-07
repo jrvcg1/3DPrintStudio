@@ -7,7 +7,6 @@ import {
   onSnapshot,
   query,
   where,
-  orderBy,
   arrayUnion
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../config/firebase';
@@ -16,7 +15,7 @@ import { sendOrderStatusEmailNotification, sendNewMessageEmailNotification } fro
 
 const LOCAL_STORAGE_ORDERS_KEY = '3d_studio_orders';
 
-const getLocalOrders = (): Order[] => {
+export const getLocalOrders = (): Order[] => {
   try {
     const data = localStorage.getItem(LOCAL_STORAGE_ORDERS_KEY);
     return data ? JSON.parse(data) : [];
@@ -25,11 +24,19 @@ const getLocalOrders = (): Order[] => {
   }
 };
 
-const setLocalOrders = (orders: Order[]): void => {
+export const setLocalOrders = (orders: Order[]): void => {
   try {
     localStorage.setItem(LOCAL_STORAGE_ORDERS_KEY, JSON.stringify(orders));
   } catch (e) {
     console.error('Error saving local orders:', e);
+  }
+};
+
+export const clearLocalOrdersStorage = (): void => {
+  try {
+    localStorage.removeItem(LOCAL_STORAGE_ORDERS_KEY);
+  } catch {
+    // silent
   }
 };
 
@@ -245,11 +252,12 @@ export const subscribeAllOrders = (onUpdate: (orders: Order[]) => void): (() => 
   }
 
   try {
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+    const q = collection(db, 'orders');
     return onSnapshot(
       q,
       async (snap) => {
         const rawOrders = snap.docs.map(d => ({ id: d.id, ...d.data() } as Order));
+        rawOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const checkedOrders = await checkAndApplyAutoReceive24h(rawOrders);
         setLocalOrders(checkedOrders);
         onUpdate(checkedOrders);
@@ -279,14 +287,19 @@ export const subscribeUserOrders = (userId: string, onUpdate: (orders: Order[]) 
   try {
     const q = query(
       collection(db, 'orders'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', userId)
     );
     return onSnapshot(
       q,
       async (snap) => {
         const rawOrders = snap.docs.map(d => ({ id: d.id, ...d.data() } as Order));
+        rawOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const checkedOrders = await checkAndApplyAutoReceive24h(rawOrders);
+        
+        // Sync local storage with Firestore state for this user (purge deleted orders)
+        const otherUsersOrders = getLocalOrders().filter(o => o.userId !== userId);
+        setLocalOrders([...otherUsersOrders, ...checkedOrders]);
+
         onUpdate(checkedOrders);
       },
       (err) => {
