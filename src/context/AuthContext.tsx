@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import {
   User,
   GoogleAuthProvider,
@@ -126,6 +128,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!auth) { setAuthError('Firebase Auth no está configurado.'); return; }
     setAuthError(null);
 
+    // If running in native Android container, open system browser for secure Google Auth
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Browser.open({ url: 'https://jrprintstudio.vercel.app' });
+        setAuthError('Se ha abierto el navegador de tu móvil para iniciar sesión de forma segura con Google.');
+        return;
+      } catch (e) {
+        console.warn('Browser.open error:', e);
+      }
+    }
+
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
@@ -143,7 +156,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await signInWithRedirect(auth, provider);
       } catch (redirectErr: any) {
         console.error('Google Sign-In redirect error:', redirectErr);
-        setAuthError('Utiliza la pestaña "Email" (Email/Contraseña) para acceder directamente.');
+        setAuthError('Google restringe emergentes en Apps Android. Utiliza la pestaña "Email" (Email/Contraseña) para acceder directamente.');
       }
     }
   };
