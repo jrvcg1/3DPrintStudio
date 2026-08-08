@@ -22,6 +22,7 @@ export interface Product {
   stock: number;
   popularity: number; // Contador de visitas o pedidos para ordenamiento
   dimensions?: string; // Ej: "8 x 5 x 4 cm"
+  makerWorldUrl?: string; // URL original de MakerWorld
   createdAt: string;
 }
 

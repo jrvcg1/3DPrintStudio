@@ -3,7 +3,7 @@ import {
   Plus, Edit, Trash2, ShieldCheck, Box, RefreshCw, Download, Settings,
   Eye, EyeOff, Save, CheckCircle2, AlertTriangle, Layers, MessageSquare,
   Sparkles, Image as ImageIcon, Phone, Users, Mail, Calendar, Clock, UserX, Crown, LogOut,
-  ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter, MapPin
+  ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter, MapPin, Globe
 } from 'lucide-react';
 import { ADMIN_PASSWORD } from '../../config/admin';
 import { Product, ProductColor, getProductSku } from '../../types/product';
@@ -16,6 +16,7 @@ import { subscribeAllOrders, updateOrderStatus } from '../../services/orderServi
 import { useToast } from '../../context/ToastContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { MakerWorldImportModal } from './MakerWorldImportModal';
+import { MakerWorldBrowserModal } from './MakerWorldBrowserModal';
 import { OrderChatModal } from '../orders/OrderChatModal';
 
 interface AdminPanelProps {
@@ -48,6 +49,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'config' | 'categories' | 'users'>('orders');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isMakerWorldOpen, setIsMakerWorldOpen] = useState(false);
+  const [browserUrl, setBrowserUrl] = useState<string | null>(null);
+  const [browserTitle, setBrowserTitle] = useState<string | undefined>(undefined);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [configForm, setConfigForm] = useState<BusinessConfig>(config);
   const [newCatName, setNewCatName] = useState('');
@@ -663,6 +666,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {p.makerWorldUrl && (
+                            <button
+                              onClick={() => {
+                                setBrowserUrl(p.makerWorldUrl || null);
+                                setBrowserTitle(p.name);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all"
+                              title="Abrir modelo en navegador MakerWorld integrado"
+                            >
+                              <Globe className="w-3.5 h-3.5 text-purple-400" />
+                              <span>MakerWorld</span>
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEditProduct(p)}
                             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-cyan-400 border border-white/10"
@@ -1025,6 +1041,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Enlace de MakerWorld (Opcional):</label>
+                <input
+                  type="text"
+                  value={editingProduct.makerWorldUrl || ''}
+                  onChange={e => setEditingProduct({ ...editingProduct, makerWorldUrl: e.target.value })}
+                  placeholder="https://makerworld.com/en/models/..."
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-cyan-300 text-xs font-mono focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
                 <label className="text-xs font-bold text-slate-300 block mb-1">Descripción Breve:</label>
                 <textarea
                   rows={2}
@@ -1092,6 +1119,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         isOpen={!!chatOrder}
         order={chatOrder}
         onClose={() => setChatOrder(null)}
+      />
+
+      {/* EMBEDDED MAKERWORLD BROWSER MODAL */}
+      <MakerWorldBrowserModal
+        isOpen={!!browserUrl}
+        url={browserUrl}
+        productName={browserTitle}
+        onClose={() => setBrowserUrl(null)}
       />
     </div>
   );

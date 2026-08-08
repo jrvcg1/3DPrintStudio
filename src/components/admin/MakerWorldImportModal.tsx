@@ -68,6 +68,7 @@ export const MakerWorldImportModal: React.FC<MakerWorldImportModalProps> = ({
       price: customPrice,
       category: extractedData.suggestedCategorySlug,
       images: extractedData.images,
+      makerWorldUrl: extractedData.modelUrl || urlInput.trim(),
       colors: [
         { name: 'Negro Mate', hex: '#111827' },
         { name: 'Blanco Nieve', hex: '#F9FAFB' },
