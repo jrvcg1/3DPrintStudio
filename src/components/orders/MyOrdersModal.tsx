@@ -394,5 +394,19 @@ const StatusActionBox: React.FC<{
     );
   }
 
+  if (order.status === 'cancelled') {
+    return (
+      <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs space-y-1.5">
+        <p className="font-bold text-rose-300 flex items-center gap-1.5">
+          <AlertCircle className="w-4 h-4 text-rose-400" />
+          Pedido Cancelado por el Administrador
+        </p>
+        <p className="text-[11px] text-slate-300">
+          Este pedido ha sido cancelado. Si habías realizado una transferencia o Bizum, el administrador te contactará para la devolución o aclaraciones. Puedes escribirle desde el botón "Mensajes".
+        </p>
+      </div>
+    );
+  }
+
   return null;
 };

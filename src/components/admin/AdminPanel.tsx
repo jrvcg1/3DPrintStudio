@@ -381,7 +381,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               { id: 'in_production', label: `⚙️ En Fabricación (${liveOrders.filter(o => o.status === 'in_production').length})` },
               { id: 'completed_pending_delivery', label: `📦 Listo Entrega (${liveOrders.filter(o => o.status === 'completed_pending_delivery').length})` },
               { id: 'delivered', label: `🚚 Entregados (${liveOrders.filter(o => o.status === 'delivered').length})` },
-              { id: 'received', label: `✅ Recibidos (${liveOrders.filter(o => o.status === 'received').length})` }
+              { id: 'received', label: `✅ Recibidos (${liveOrders.filter(o => o.status === 'received').length})` },
+              { id: 'cancelled', label: `❌ Cancelados (${liveOrders.filter(o => o.status === 'cancelled').length})` }
             ].map(f => (
               <button
                 key={f.id}
@@ -550,6 +551,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                 <Truck className="w-3.5 h-3.5" />
                                 <span>Marcar Entregado</span>
                               </button>
+                            )}
+
+                            {ord.status !== 'cancelled' ? (
+                              <button
+                                onClick={() => {
+                                  if (confirm(`¿Estás seguro de que deseas cancelar el pedido ${ord.orderNumber}?`)) {
+                                    handleStatusChange(ord.id, 'cancelled');
+                                  }
+                                }}
+                                className="w-full py-1.5 px-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95 transition-all mt-1"
+                                title="Cancelar pedido y notificar al cliente"
+                              >
+                                <X className="w-3.5 h-3.5 text-rose-400" />
+                                <span>Cancelar Pedido</span>
+                              </button>
+                            ) : (
+                              <div className="text-[11px] font-bold text-rose-400 text-center py-1">
+                                ❌ Cancelado
+                              </div>
                             )}
                           </td>
                         </tr>

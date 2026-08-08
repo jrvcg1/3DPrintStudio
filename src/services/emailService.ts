@@ -49,6 +49,13 @@ export const sendOrderStatusEmailNotification = async (
     extraInstructions = `
       <p style="color: #2DD4BF;">🚚 Tu paquete ha sido entregado. Recuerda entrar a la web y pulsar en "Confirmar Recibido" (o se confirmará automáticamente en 24h).</p>
     `;
+  } else if (newStatus === 'cancelled') {
+    extraInstructions = `
+      <div style="background-color: #0F172A; border: 1px solid #F43F5E; padding: 15px; border-radius: 12px; margin: 15px 0;">
+        <h3 style="color: #F43F5E; margin-top: 0;">❌ Pedido Cancelado</h3>
+        <p style="color: #E2E8F0; margin: 5px 0;">El pedido ha sido cancelado por el administrador. Si tienes cualquier consulta o necesitas información sobre pagos, por favor contáctanos desde la app.</p>
+      </div>
+    `;
   }
 
   const subject = `Actualización de tu pedido ${order.orderNumber}: ${statusTitle} - 3D Print Studio`;
