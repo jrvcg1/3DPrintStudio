@@ -397,7 +397,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             ))}
           </div>
 
-          {/* Orders Cards List */}
+          {/* Orders Table List (1 row per order) */}
           {filteredOrders.length === 0 ? (
             <div className="glass-card rounded-3xl p-12 text-center border border-white/10 space-y-3">
               <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto">
@@ -409,159 +409,155 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredOrders.map(ord => {
-                const unreadAdminCount = ord.unreadAdminMessagesCount || 0;
-                return (
-                  <div
-                    key={ord.id}
-                    className="glass-card rounded-3xl p-5 border border-white/10 space-y-4 hover:border-amber-500/30 transition-all shadow-xl"
-                  >
-                    {/* Order Top Bar */}
-                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-black text-amber-300 px-2.5 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30">
-                          {ord.orderNumber}
-                        </span>
-                        <span className="text-xs text-slate-400 font-medium">
-                          {new Date(ord.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setChatOrder(ord)}
-                          className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all relative"
-                          title="Responder cliente o enviar dudas"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>Chat Cliente</span>
-                          {unreadAdminCount > 0 && (
-                            <span className="px-1.5 py-0.2 rounded-full bg-cyan-400 text-slate-950 font-black text-[10px] animate-pulse">
-                              {unreadAdminCount}
-                            </span>
-                          )}
-                        </button>
-
-                        <AdminStatusBadge status={ord.status} />
-                      </div>
-                    </div>
-
-                    {/* Customer Info */}
-                    <div className="bg-slate-900/60 p-3 rounded-2xl border border-white/5 space-y-1.5 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Cliente:</span>
-                        <span className="font-bold text-white">{ord.userName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Email:</span>
-                        <span className="text-slate-300 truncate max-w-[200px]">{ord.userEmail}</span>
-                      </div>
-                      {ord.contactPhone && (
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Teléfono:</span>
-                          <span className="text-cyan-300 font-mono font-bold">{ord.contactPhone}</span>
-                        </div>
-                      )}
-                      {ord.shippingAddress && (
-                        <div className="flex justify-between border-t border-white/5 pt-1">
-                          <span className="text-slate-400">Dirección:</span>
-                          <span className="text-slate-200 truncate max-w-[220px]">{ord.shippingAddress}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Order Items */}
-                    <div className="space-y-2">
-                      {ord.items.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
-                          {item.productImage && (
-                            <img src={item.productImage} alt="" className="w-12 h-12 rounded-xl object-cover ring-1 ring-white/10" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-extrabold text-white text-xs truncate">{item.productName}</p>
-                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                              <span>Cant: <strong className="text-white">{item.quantity}</strong></span>
-                              {item.selectedColor && (
-                                <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-cyan-300">
-                                  Color: {item.selectedColor}
-                                </span>
-                              )}
-                              {item.customText && (
-                                <span className="px-1.5 py-0.2 rounded bg-slate-800 border border-white/10 text-purple-300 uppercase">
-                                  Texto: "{item.customText}"
-                                </span>
-                              )}
+            <div className="glass-card rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300 border-collapse">
+                  <thead>
+                    <tr className="bg-slate-900/90 border-b border-white/10 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      <th className="p-4">Pedido / Fecha</th>
+                      <th className="p-4">Cliente & Contacto</th>
+                      <th className="p-4">Productos 3D</th>
+                      <th className="p-4 text-right">Importe Total</th>
+                      <th className="p-4 text-center">Estado</th>
+                      <th className="p-4 text-right">Acciones / Gestión</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {filteredOrders.map(ord => {
+                      const unreadAdminCount = ord.unreadAdminMessagesCount || 0;
+                      return (
+                        <tr key={ord.id} className="hover:bg-white/[0.02] transition-colors">
+                          {/* Nº Pedido & Fecha */}
+                          <td className="p-4 align-top whitespace-nowrap">
+                            <div className="font-mono text-sm font-black text-amber-300">
+                              {ord.orderNumber}
                             </div>
-                          </div>
-                          <span className="font-black text-white text-xs">{item.totalPrice.toFixed(2)}€</span>
-                        </div>
-                      ))}
-                    </div>
+                            <div className="text-[11px] text-slate-400 mt-1">
+                              {new Date(ord.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </td>
 
-                    {/* Amount summary */}
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-slate-400">Importe Total:</span>
-                      <span className="text-lg font-black text-amber-300">{ord.totalAmount.toFixed(2)}€</span>
-                    </div>
+                          {/* Cliente & Contacto */}
+                          <td className="p-4 align-top min-w-[200px]">
+                            <div className="font-extrabold text-white text-xs">{ord.userName}</div>
+                            <div className="text-slate-400 text-[11px] truncate max-w-[200px]">{ord.userEmail}</div>
+                            {ord.contactPhone && (
+                              <div className="text-cyan-300 font-mono font-bold text-[11px] mt-1">
+                                📞 {ord.contactPhone}
+                              </div>
+                            )}
+                            {ord.shippingAddress && (
+                              <div className="text-slate-300 text-[11px] truncate max-w-[220px] mt-0.5">
+                                📍 {ord.shippingAddress}
+                              </div>
+                            )}
+                          </td>
 
-                    {/* ADMIN TRANSITION ACTION BUTTONS */}
-                    <div className="pt-2 border-t border-white/10">
-                      {ord.status === 'pending_approval' && (
-                        <button
-                          onClick={() => handleStatusChange(ord.id, 'pending_payment')}
-                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                        >
-                          <Check className="w-4 h-4" />
-                          <span>Aceptar Pedido (Solicitar Pago Bizum)</span>
-                        </button>
-                      )}
+                          {/* Productos 3D */}
+                          <td className="p-4 align-top min-w-[240px]">
+                            <div className="space-y-2">
+                              {ord.items.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-2.5 bg-white/5 p-2 rounded-xl border border-white/5">
+                                  {item.productImage && (
+                                    <img src={item.productImage} alt="" className="w-9 h-9 rounded-lg object-cover ring-1 ring-white/10 shrink-0" />
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-white text-xs truncate">{item.productName}</p>
+                                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                                      <span>x<strong className="text-white">{item.quantity}</strong></span>
+                                      {item.selectedColor && (
+                                        <span className="px-1 py-0.2 rounded bg-slate-800 border border-white/10 text-cyan-300">
+                                          {item.selectedColor}
+                                        </span>
+                                      )}
+                                      {item.customText && (
+                                        <span className="px-1 py-0.2 rounded bg-slate-800 border border-white/10 text-purple-300 uppercase">
+                                          "{item.customText}"
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
 
-                      {ord.status === 'pending_payment' && (
-                        <button
-                          onClick={() => handleStatusChange(ord.id, 'in_production')}
-                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                        >
-                          <CreditCard className="w-4 h-4" />
-                          <span>Confirmar Pago Bizum e Iniciar Fabricación</span>
-                        </button>
-                      )}
+                          {/* Importe Total */}
+                          <td className="p-4 align-top text-right whitespace-nowrap">
+                            <div className="text-base font-black text-amber-300">
+                              {ord.totalAmount.toFixed(2)}€
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {ord.shippingCost > 0 ? `+${ord.shippingCost}€ envío` : 'Envío Gratis'}
+                            </div>
+                          </td>
 
-                      {ord.status === 'in_production' && (
-                        <button
-                          onClick={() => handleStatusChange(ord.id, 'completed_pending_delivery')}
-                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                        >
-                          <Package className="w-4 h-4" />
-                          <span>Finalizado / Listo para Entrega</span>
-                        </button>
-                      )}
+                          {/* Estado */}
+                          <td className="p-4 align-top text-center whitespace-nowrap">
+                            <AdminStatusBadge status={ord.status} />
+                          </td>
 
-                      {ord.status === 'completed_pending_delivery' && (
-                        <button
-                          onClick={() => handleStatusChange(ord.id, 'delivered')}
-                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-black text-xs shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                        >
-                          <Truck className="w-4 h-4" />
-                          <span>Marcar como Entregado (Inicia timer 24h)</span>
-                        </button>
-                      )}
+                          {/* Acciones / Gestión */}
+                          <td className="p-4 align-top text-right whitespace-nowrap space-y-2">
+                            <button
+                              onClick={() => setChatOrder(ord)}
+                              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all relative"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Chat Cliente</span>
+                              {unreadAdminCount > 0 && (
+                                <span className="px-1.5 py-0.2 rounded-full bg-cyan-400 text-slate-950 font-black text-[10px]">
+                                  {unreadAdminCount}
+                                </span>
+                              )}
+                            </button>
 
-                      {ord.status === 'delivered' && (
-                        <div className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-center text-xs text-teal-300 font-bold">
-                          🚚 Entregado · Esperando confirmación del cliente (Auto-recibido en 24h)
-                        </div>
-                      )}
+                            {ord.status === 'pending_approval' && (
+                              <button
+                                onClick={() => handleStatusChange(ord.id, 'pending_payment')}
+                                className="w-full py-1.5 px-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-[11px] shadow flex items-center justify-center gap-1 active:scale-95 transition-all"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Aceptar Pedido</span>
+                              </button>
+                            )}
 
-                      {ord.status === 'received' && (
-                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-xs text-emerald-300 font-bold">
-                          ✅ Pedido completado y Recibido por el cliente
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                            {ord.status === 'pending_payment' && (
+                              <button
+                                onClick={() => handleStatusChange(ord.id, 'in_production')}
+                                className="w-full py-1.5 px-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black text-[11px] shadow flex items-center justify-center gap-1 active:scale-95 transition-all"
+                              >
+                                <CreditCard className="w-3.5 h-3.5" />
+                                <span>Confirmar Pago</span>
+                              </button>
+                            )}
+
+                            {ord.status === 'in_production' && (
+                              <button
+                                onClick={() => handleStatusChange(ord.id, 'completed_pending_delivery')}
+                                className="w-full py-1.5 px-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-[11px] shadow flex items-center justify-center gap-1 active:scale-95 transition-all"
+                              >
+                                <Package className="w-3.5 h-3.5" />
+                                <span>Listo Entrega</span>
+                              </button>
+                            )}
+
+                            {ord.status === 'completed_pending_delivery' && (
+                              <button
+                                onClick={() => handleStatusChange(ord.id, 'delivered')}
+                                className="w-full py-1.5 px-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-black text-[11px] shadow flex items-center justify-center gap-1 active:scale-95 transition-all"
+                              >
+                                <Truck className="w-3.5 h-3.5" />
+                                <span>Marcar Entregado</span>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
