@@ -104,7 +104,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       getRedirectResult(auth)
-        .then(result => { if (result?.user) syncUserToFirestore(result.user); })
+        .then(async (result) => {
+          if (result?.user) {
+            setUser(result.user);
+            const profile = await syncUserToFirestore(result.user);
+            setAppUser(profile);
+          }
+        })
         .catch(err => console.info('Handled redirect check:', err?.message || 'No redirect pending'));
     } catch {
       // safe fallback
