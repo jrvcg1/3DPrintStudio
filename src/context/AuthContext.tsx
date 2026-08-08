@@ -152,16 +152,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setAppUser(profile);
       }
     } catch (err: any) {
-      console.warn('Google Sign-In popup error, attempting redirect fallback:', err?.code, err?.message);
+      console.warn('Google Sign-In popup error:', err?.code, err?.message);
       if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
         setAuthError(null);
+        return;
+      }
+      if (err?.code === 'auth/unauthorized-domain') {
+        setAuthError('⚠️ Dominio no autorizado en Firebase: Añade "jrprintstudio.vercel.app" a Firebase Console -> Authentication -> Settings -> Authorized domains.');
         return;
       }
       try {
         await signInWithRedirect(auth, provider);
       } catch (redirectErr: any) {
         console.error('Google Sign-In redirect error:', redirectErr);
-        setAuthError('Google restringe emergentes en Apps Android. Utiliza la pestaña "Email" (Email/Contraseña) para acceder directamente.');
+        if (redirectErr?.code === 'auth/unauthorized-domain') {
+          setAuthError('⚠️ Dominio no autorizado en Firebase: Añade "jrprintstudio.vercel.app" a Firebase Console -> Authentication -> Settings -> Authorized domains.');
+        } else {
+          setAuthError(redirectErr?.message || 'Error al acceder con Google. Inténtalo de nuevo.');
+        }
       }
     }
   };
