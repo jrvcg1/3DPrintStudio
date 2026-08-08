@@ -8,6 +8,7 @@ export const INITIAL_CONFIG: BusinessConfig = {
   whatsappNumber: '34600000000', // Modificable en el panel de administración
   welcomeMessage: '¡Hola! Bienvenidos a 3D Print Studio. Haz tu pedido online con seguimiento en tiempo real.',
   announcementBanner: '🚀 ¡Envío gratis en todos los pedidos de más de 30€! Piezas impresas con PLA 100% Biodegradable.',
+  showAnnouncementBanner: true,
   isStoreActive: true,
   currencySymbol: '€',
   instagramUrl: 'https://instagram.com',

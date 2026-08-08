@@ -43,6 +43,7 @@ export interface BusinessConfig {
   whatsappNumber: string; // Formato internacional ej: "34600000000"
   welcomeMessage: string;
   announcementBanner?: string;
+  showAnnouncementBanner?: boolean;
   isStoreActive: boolean;
   currencySymbol: string;
   instagramUrl?: string;

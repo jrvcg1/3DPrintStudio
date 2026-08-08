@@ -861,7 +861,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Banner Promocional Superior:</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold uppercase text-slate-300">Banner Promocional Superior:</label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={configForm.showAnnouncementBanner ?? true}
+                      onChange={e => setConfigForm({ ...configForm, showAnnouncementBanner: e.target.checked })}
+                      className="w-4 h-4 rounded text-cyan-500"
+                    />
+                    <span className="text-xs font-bold text-slate-200">Mostrar Banner Promocional</span>
+                  </label>
+                </div>
                 <input
                   type="text"
                   value={configForm.announcementBanner || ''}

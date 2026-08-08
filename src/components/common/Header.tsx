@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-40 w-full glass-header transition-all duration-300">
       {/* Announcement Banner */}
-      {config.announcementBanner && (
+      {(config.showAnnouncementBanner ?? true) && config.announcementBanner && (
         <div className="bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 text-white text-xs font-semibold py-1.5 px-4 text-center tracking-wide overflow-hidden flex items-center justify-center gap-2">
           <Sparkles className="w-3.5 h-3.5 animate-pulse" />
           <span>{config.announcementBanner}</span>
