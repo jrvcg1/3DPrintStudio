@@ -36,6 +36,32 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [ordering, setOrdering] = useState(false);
 
+  useEffect(() => {
+    if (isOpen && product) {
+      setSelectedColor(
+        product.colors && product.colors.length > 0
+          ? product.colors[0].name
+          : product.customizationOptions?.colorOptions?.[0] || 'Estándar'
+      );
+      setQuantity(1);
+      setCustomText('');
+      setActiveImageIndex(0);
+      modalRef.current?.focus();
+    }
+  }, [isOpen, product]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !product) return null;
+
   const images = product.images && product.images.length > 0
     ? product.images
     : ['https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80'];
@@ -102,47 +128,57 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-        <div className="relative w-full max-w-4xl glass-card rounded-3xl overflow-hidden shadow-2xl border border-white/20 my-8">
-          
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-xl animate-fadeIn"
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      >
+        <div 
+          ref={modalRef}
+          tabIndex={-1}
+          className="relative w-full max-w-4xl max-h-[90vh] glass-card rounded-3xl border border-white/20 shadow-2xl flex flex-col overflow-hidden animate-slideUp outline-none"
+        >
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-slate-950/60 text-slate-400 hover:text-white border border-white/10 backdrop-blur-md transition-colors"
+            className="absolute top-4 right-4 z-30 p-2.5 rounded-full bg-slate-950/80 text-slate-400 hover:text-white border border-white/10 backdrop-blur-md transition-colors shadow-lg"
+            title="Cerrar ventana (Esc)"
           >
             <X className="w-5 h-5" />
           </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2">
-            {/* Gallery Column */}
-            <div className="p-6 bg-slate-950/40 border-b md:border-b-0 md:border-r border-white/10 flex flex-col justify-between space-y-4">
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-white/10 shadow-inner group">
-                <img
-                  src={images[activeImageIndex]}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-cyan-500/30 text-[11px] font-mono font-bold text-cyan-300">
-                  {productSku}
+          {/* Modal Scrollable Body */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-white/5">
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              {/* Gallery Column */}
+              <div className="p-6 bg-slate-950/40 border-b md:border-b-0 md:border-r border-white/10 flex flex-col justify-between space-y-4">
+                <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-white/10 shadow-inner group">
+                  <img
+                    src={images[activeImageIndex]}
+                    alt={product.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-cyan-500/30 text-[11px] font-mono font-bold text-cyan-300">
+                    {productSku}
+                  </div>
                 </div>
-              </div>
 
-              {/* Thumbnails */}
-              {images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveImageIndex(idx)}
-                      className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
-                        activeImageIndex === idx ? 'border-cyan-400 scale-105' : 'border-transparent opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
+                {/* Thumbnails */}
+                {images.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {images.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveImageIndex(idx)}
+                        className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
+                          activeImageIndex === idx ? 'border-cyan-400 scale-105' : 'border-transparent opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Product Info Column */}

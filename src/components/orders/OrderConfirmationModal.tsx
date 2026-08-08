@@ -35,12 +35,25 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   const [shippingAddress, setShippingAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const modalRef = React.useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (isOpen) {
       setUserName(userDefaultName || userDefaultEmail?.split('@')[0] || 'Cliente');
       setUserEmail(userDefaultEmail || '');
+      modalRef.current?.focus();
     }
   }, [isOpen, userDefaultName, userDefaultEmail]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !product) return null;
 
@@ -71,16 +84,26 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xl overflow-y-auto animate-fadeIn">
-      <div className="w-full max-w-lg glass-card rounded-3xl p-6 sm:p-8 border border-cyan-500/30 shadow-2xl space-y-6 relative overflow-hidden animate-slideUp my-6">
-        
-        {/* Close Button */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xl animate-fadeIn"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        className="w-full max-w-lg max-h-[90vh] glass-card rounded-3xl border border-cyan-500/30 shadow-2xl flex flex-col overflow-hidden relative animate-slideUp outline-none"
+      >
+        {/* Sticky Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 z-30 p-2 rounded-xl bg-slate-950/80 text-slate-400 hover:text-white border border-white/10 transition-colors shadow-md"
+          title="Cerrar (Esc)"
         >
           <X className="w-5 h-5" />
         </button>
+
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-white/5">
 
         {/* Modal Title */}
         <div className="text-center space-y-2">
@@ -216,5 +239,6 @@ export const OrderConfirmationModal: React.FC<OrderConfirmationModalProps> = ({
         </form>
       </div>
     </div>
-  );
+  </div>
+);
 };
