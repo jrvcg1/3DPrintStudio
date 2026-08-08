@@ -8,7 +8,8 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy
+  orderBy,
+  onSnapshot
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../config/firebase';
 import { Product } from '../types/product';
@@ -96,6 +97,35 @@ export const getProducts = async (): Promise<Product[]> => {
   return getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
 };
 
+export const subscribeProducts = (callback: (products: Product[]) => void) => {
+  if (!db || !isFirebaseConfigured) {
+    const local = getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    callback(local);
+    return () => {};
+  }
+
+  const colRef = collection(db, 'products');
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      if (snapshot.empty) {
+        const local = getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+        callback(local);
+        return;
+      }
+      const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      prods.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
+      setLocalData(STORAGE_KEYS.PRODUCTS, prods);
+      callback(prods);
+    },
+    (err) => {
+      console.warn('Realtime products subscription warning:', err);
+      const local = getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+      callback(local);
+    }
+  );
+};
+
 export const getProductBySlug = async (slug: string): Promise<Product | null> => {
   const products = await getProducts();
   return products.find(p => p.slug === slug) || null;
@@ -147,6 +177,34 @@ export const getCategories = async (): Promise<Category[]> => {
     }
   }
   return getLocalData<Category[]>(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES);
+};
+
+export const subscribeCategories = (callback: (categories: Category[]) => void) => {
+  if (!db || !isFirebaseConfigured) {
+    const local = getLocalData<Category[]>(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES);
+    callback(local);
+    return () => {};
+  }
+
+  const colRef = collection(db, 'categories');
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      if (snapshot.empty) {
+        const local = getLocalData<Category[]>(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES);
+        callback(local);
+        return;
+      }
+      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+      setLocalData(STORAGE_KEYS.CATEGORIES, cats);
+      callback(cats);
+    },
+    (err) => {
+      console.warn('Realtime categories subscription warning:', err);
+      const local = getLocalData<Category[]>(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES);
+      callback(local);
+    }
+  );
 };
 
 export const saveCategory = async (category: Category): Promise<void> => {

@@ -38,7 +38,9 @@ import {
   saveBusinessConfig,
   saveCategory,
   addReview,
-  resetToMockData
+  resetToMockData,
+  subscribeProducts,
+  subscribeCategories
 } from './services/firebaseService';
 
 export const AppContent: React.FC = () => {
@@ -83,6 +85,20 @@ export const AppContent: React.FC = () => {
 
   useEffect(() => {
     syncData();
+
+    // Realtime subscribers for instant catalog updates across all devices & APK
+    const unsubProds = subscribeProducts((liveProducts) => {
+      setProducts(liveProducts);
+    });
+
+    const unsubCats = subscribeCategories((liveCats) => {
+      setCategories(liveCats);
+    });
+
+    return () => {
+      unsubProds();
+      unsubCats();
+    };
   }, []);
 
   const handleNavigate = (tab: string, categoryFilter?: string) => {
