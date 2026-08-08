@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Clock, Layers, ShieldCheck, Check, Sparkles, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { Product, ProductColor, getProductSku } from '../../types/product';
 import { BusinessConfig } from '../../types/config';
@@ -25,6 +25,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   if (!product) return null;
 
   const { isAuthenticated, appUser, user } = useAuth();
+  const modalRef = useRef<HTMLDivElement>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState<string>(
@@ -179,10 +180,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Product Info Column */}
-            <div className="p-6 md:p-8 flex flex-col justify-between space-y-6">
+              {/* Product Info Column */}
+              <div className="p-6 md:p-8 flex flex-col justify-between space-y-6">
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -329,6 +329,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
         </div>
       </div>
+    </div>
 
       {/* ORDER CONFIRMATION MODAL */}
       <OrderConfirmationModal
