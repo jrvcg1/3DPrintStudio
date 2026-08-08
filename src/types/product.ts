@@ -54,3 +54,15 @@ export function getProductSku(product: Partial<Product>): string {
   
   return `#REF-3D-${Math.floor(1000 + Math.random() * 9000)}`;
 }
+
+export function getMakerWorldUrl(product: Partial<Product>): string | null {
+  if (product.makerWorldUrl && product.makerWorldUrl.trim()) {
+    return product.makerWorldUrl.trim();
+  }
+  const idStr = (product.sku || '') + ' ' + (product.id || '');
+  const match = idStr.match(/\b(\d{5,8})\b/);
+  if (match) {
+    return `https://makerworld.com/en/models/${match[1]}`;
+  }
+  return null;
+}

@@ -6,7 +6,7 @@ import {
   ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter, MapPin, Globe
 } from 'lucide-react';
 import { ADMIN_PASSWORD } from '../../config/admin';
-import { Product, ProductColor, getProductSku } from '../../types/product';
+import { Product, ProductColor, getProductSku, getMakerWorldUrl } from '../../types/product';
 import { Category } from '../../types/category';
 import { BusinessConfig } from '../../types/config';
 import { Order, OrderStatus } from '../../types/order';
@@ -617,6 +617,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <tr>
                     <th className="p-4">Ref / ID</th>
                     <th className="p-4">Producto</th>
+                    <th className="p-4">Origen / Enlace</th>
                     <th className="p-4">Categoría</th>
                     <th className="p-4">Precio</th>
                     <th className="p-4">Tiempo</th>
@@ -644,6 +645,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             <span className="text-[10px] text-cyan-400 font-extrabold uppercase">★ Destacado</span>
                           )}
                         </div>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        {(() => {
+                          const mwUrl = getMakerWorldUrl(p);
+                          if (mwUrl) {
+                            return (
+                              <button
+                                onClick={() => {
+                                  setBrowserUrl(mwUrl);
+                                  setBrowserTitle(p.name);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-black shadow-sm active:scale-95 transition-all"
+                                title="Abrir modelo en navegador MakerWorld integrado"
+                              >
+                                <Globe className="w-3.5 h-3.5 text-purple-400" />
+                                <span>🌐 MakerWorld</span>
+                              </button>
+                            );
+                          }
+                          return (
+                            <span className="text-[11px] text-slate-500 italic">Manual</span>
+                          );
+                        })()}
                       </td>
                       <td className="p-4 capitalize text-slate-400">{p.category}</td>
                       <td className="p-4 font-black text-white text-sm">{p.price.toFixed(2)}€</td>
