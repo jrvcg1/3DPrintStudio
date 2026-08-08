@@ -168,9 +168,16 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </p>
                 </div>
 
-                <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
-                  {product.longDescription || product.description}
-                </p>
+                {/* Product Description with 20-line scroll cap */}
+                <div className="rounded-2xl p-3.5 bg-slate-900/60 border border-white/10 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                    <span>Descripción del Producto</span>
+                    <span className="text-[10px] text-cyan-400 font-mono font-normal">Máx. 20 líneas</span>
+                  </div>
+                  <div className="max-h-[20lh] max-h-[380px] overflow-y-auto pr-2 text-xs md:text-sm text-slate-300 leading-relaxed whitespace-pre-line scrollbar-thin scrollbar-thumb-cyan-500/30 scrollbar-track-white/5">
+                    {product.longDescription || product.description}
+                  </div>
+                </div>
 
                 {/* Technical Specs Badges */}
                 <div className="grid grid-cols-2 gap-2 pt-2 text-xs">
