@@ -241,6 +241,7 @@ export const AppContent: React.FC = () => {
 
       {/* Product Detail Modal */}
       <ProductDetailModal
+        isOpen={!!selectedProduct}
         product={selectedProduct}
         config={config}
         onClose={() => setSelectedProduct(null)}

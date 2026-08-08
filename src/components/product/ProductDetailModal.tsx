@@ -8,14 +8,16 @@ import { Order } from '../../types/order';
 import { OrderConfirmationModal } from '../orders/OrderConfirmationModal';
 
 interface ProductDetailModalProps {
+  isOpen: boolean;
   product: Product | null;
   config: BusinessConfig;
   onClose: () => void;
   onOrderSuccess: (order: Order) => void;
-  onRequireAuth: () => void;
+  onRequireAuth?: () => void;
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
+  isOpen,
   product,
   config,
   onClose,
