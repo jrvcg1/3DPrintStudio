@@ -167,12 +167,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await signInWithEmailAndPassword(auth, e.trim(), p);
     } catch (err: any) {
-      if (err?.code === 'auth/invalid-credential' || err?.code === 'auth/wrong-password' || err?.code === 'auth/user-not-found') {
+      if (err?.code === 'auth/operation-not-allowed') {
+        setAuthError('El proveedor Email/Contraseña no está habilitado en la consola de Firebase. Usa el acceso con Google.');
+      } else if (err?.code === 'auth/invalid-credential' || err?.code === 'auth/wrong-password' || err?.code === 'auth/user-not-found') {
         setAuthError('Email o contraseña incorrectos.');
       } else if (err?.code === 'auth/invalid-email') {
         setAuthError('El formato de email no es válido.');
       } else {
-        setAuthError('Error al iniciar sesión con email.');
+        setAuthError(err?.message || 'Error al iniciar sesión con email.');
       }
       throw err;
     }
@@ -188,12 +190,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await syncUserToFirestore(res.user);
       }
     } catch (err: any) {
-      if (err?.code === 'auth/email-already-in-use') {
+      if (err?.code === 'auth/operation-not-allowed') {
+        setAuthError('El proveedor Email/Contraseña no está habilitado en la consola de Firebase. Usa el acceso con Google.');
+      } else if (err?.code === 'auth/email-already-in-use') {
         setAuthError('Este email ya está registrado. Inicia sesión directamente.');
       } else if (err?.code === 'auth/weak-password') {
         setAuthError('La contraseña debe tener al menos 6 caracteres.');
       } else {
-        setAuthError('Error al crear la cuenta.');
+        setAuthError(err?.message || 'Error al crear la cuenta.');
       }
       throw err;
     }
