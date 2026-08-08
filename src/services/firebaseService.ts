@@ -86,20 +86,22 @@ export const getProducts = async (): Promise<Product[]> => {
   if (isFirebaseConfigured && db) {
     try {
       const snapshot = await getDocs(collection(db, 'products'));
-      if (!snapshot.empty) {
-        const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-        return prods.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
+      if (snapshot.empty) {
+        setLocalData(STORAGE_KEYS.PRODUCTS, []);
+        return [];
       }
+      const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      return prods.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
     } catch (error) {
       console.warn('Firebase query failed, using local storage fallback:', error);
     }
   }
-  return getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+  return getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, []);
 };
 
 export const subscribeProducts = (callback: (products: Product[]) => void) => {
   if (!db || !isFirebaseConfigured) {
-    const local = getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    const local = getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, []);
     callback(local);
     return () => {};
   }
@@ -109,8 +111,8 @@ export const subscribeProducts = (callback: (products: Product[]) => void) => {
     colRef,
     (snapshot) => {
       if (snapshot.empty) {
-        const local = getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
-        callback(local);
+        setLocalData(STORAGE_KEYS.PRODUCTS, []);
+        callback([]);
         return;
       }
       const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
@@ -120,7 +122,7 @@ export const subscribeProducts = (callback: (products: Product[]) => void) => {
     },
     (err) => {
       console.warn('Realtime products subscription warning:', err);
-      const local = getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+      const local = getLocalData<Product[]>(STORAGE_KEYS.PRODUCTS, []);
       callback(local);
     }
   );
