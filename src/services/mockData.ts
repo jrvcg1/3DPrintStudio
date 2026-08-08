@@ -12,6 +12,32 @@ export const INITIAL_CONFIG: BusinessConfig = {
   currencySymbol: '€',
   instagramUrl: 'https://instagram.com',
   tiktokUrl: 'https://tiktok.com',
+  landingPageConfig: {
+    showHeroSection: true,
+    heroBadgeText: '🖨️ Servicio de Impresión 3D Profesional & Personalizado',
+    heroTitle: 'Impresión 3D de Alta Precisión & Diseños a Medida',
+    heroSubtitle: 'Damos vida a tus ideas con materiales biodegradables de máxima calidad. Explora nuestro catálogo o encarga piezas personalizadas con seguimiento en vivo.',
+    heroImageUrl: 'https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=1000&q=80',
+    heroPrimaryCtaText: 'Explorar Catálogo',
+    showHeroPrimaryCta: true,
+    heroSecondaryCtaText: 'Encargo por MakerWorld',
+    showHeroSecondaryCta: true,
+    showFeaturesSection: true,
+    featuresTitle: '¿Por qué elegir 3D Print Studio?',
+    featuresSubtitle: 'Calidad profesional, personalización total y entregas ultra rápidas.',
+    showCatalogSection: true,
+    catalogTitle: 'Explora Nuestro Catálogo 3D',
+    showMakerWorldSection: true,
+    makerWorldTitle: 'Importa tus Modelos desde MakerWorld',
+    makerWorldSubtitle: 'Pega la URL de cualquier diseño de MakerWorld y lo imprimimos para ti con la máxima precisión.',
+    makerWorldBannerUrl: 'https://images.unsplash.com/photo-1586105251261-72a756497a11?auto=format&fit=crop&w=1000&q=80',
+    showFaqsSection: true,
+    faqsTitle: 'Preguntas Frecuentes',
+    showReviewsSection: true,
+    reviewsTitle: 'Lo que dicen nuestros clientes',
+    showFooterSection: true,
+    footerTagline: 'Servicio profesional de impresión 3D a medida.'
+  }
 };
 
 export const INITIAL_CATEGORIES: Category[] = [

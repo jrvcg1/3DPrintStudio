@@ -1,15 +1,34 @@
 import React from 'react';
-import { Box, Sparkles, MessageSquare, ArrowRight, ShieldCheck, Zap, Layers, Award } from 'lucide-react';
+import { Box, Sparkles, MessageSquare, ArrowRight, Zap, Layers, Award } from 'lucide-react';
+import { BusinessConfig } from '../../types/config';
 
 interface HeroSectionProps {
+  config: BusinessConfig;
   onExploreCatalog: () => void;
   onOpenWhatsApp: () => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
+  config,
   onExploreCatalog,
   onOpenWhatsApp
 }) => {
+  const landing = config.landingPageConfig || {
+    showHeroSection: true,
+    heroBadgeText: '🖨️ Servicio de Impresión 3D Profesional & Personalizado',
+    heroTitle: 'Tus ideas cobradas en Realidad 3D con precisión única.',
+    heroSubtitle: 'Llaveros con tu nombre, figuras articuladas, organizadores de escritorio y regalos únicos hechos bajo demanda. Haz tu pedido online y sigue su estado en tiempo real.',
+    heroImageUrl: 'https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80',
+    heroPrimaryCtaText: 'Explorar Catálogo & Pedir',
+    showHeroPrimaryCta: true,
+    heroSecondaryCtaText: 'Dudas por WhatsApp',
+    showHeroSecondaryCta: true
+  };
+
+  if (landing.showHeroSection === false) {
+    return null;
+  }
+
   return (
     <section className="relative pt-12 pb-24 md:pt-20 md:pb-32 overflow-hidden">
       {/* Dynamic Background Glows */}
@@ -21,39 +40,45 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* Left Column: Hero Copy */}
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
             {/* Top Pill */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-lg shadow-cyan-500/10 animate-float">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span>Estudio de Impresión 3D Personalizada</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            </div>
+            {landing.heroBadgeText && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-lg shadow-cyan-500/10 animate-float">
+                <Sparkles className="w-4 h-4 text-cyan-400" />
+                <span>{landing.heroBadgeText}</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              </div>
+            )}
 
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.15]">
-              Tus ideas cobradas en <span className="text-gradient">Realidad 3D</span> con precisión única.
+              {landing.heroTitle}
             </h1>
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
-              Llaveros con tu nombre, figuras articuladas, organizadores de escritorio y regalos únicos hechos bajo demanda. <strong className="text-white">Haz tu pedido online y sigue su estado en tiempo real.</strong>
+              {landing.heroSubtitle}
             </p>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
-              <button
-                onClick={onExploreCatalog}
-                className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 hover:opacity-90 text-white font-extrabold text-base shadow-xl shadow-blue-500/25 active:scale-95 transition-all group"
-              >
-                <span>Explorar Catálogo & Pedir</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
+              {landing.showHeroPrimaryCta !== false && (
+                <button
+                  onClick={onExploreCatalog}
+                  className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-purple-600 hover:opacity-90 text-white font-extrabold text-base shadow-xl shadow-blue-500/25 active:scale-95 transition-all group"
+                >
+                  <span>{landing.heroPrimaryCtaText || 'Explorar Catálogo'}</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              )}
 
-              <button
-                onClick={onOpenWhatsApp}
-                className="w-full sm:w-auto flex items-center justify-center gap-3 px-7 py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/15 font-bold text-base backdrop-blur-md active:scale-95 transition-all"
-              >
-                <MessageSquare className="w-5 h-5 text-emerald-400" />
-                <span>Dudas por WhatsApp</span>
-              </button>
+              {landing.showHeroSecondaryCta !== false && (
+                <button
+                  onClick={onOpenWhatsApp}
+                  className="w-full sm:w-auto flex items-center justify-center gap-3 px-7 py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-200 border border-white/15 font-bold text-base backdrop-blur-md active:scale-95 transition-all"
+                >
+                  <MessageSquare className="w-5 h-5 text-emerald-400" />
+                  <span>{landing.heroSecondaryCtaText || 'Dudas por WhatsApp'}</span>
+                </button>
+              )}
             </div>
 
             {/* Trust Badges Bar */}
@@ -82,15 +107,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               {/* Showcase Image */}
               <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-950 border border-white/10 group">
                 <img
-                  src="https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80"
-                  alt="Dragón Articulado 3D"
+                  src={landing.heroImageUrl || 'https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=800&q=80'}
+                  alt="Impresión 3D Destacada"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
                 
                 <div className="absolute bottom-3 left-3 right-3 p-3 rounded-xl bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-white font-bold block">Dragón Cyber Articulado</span>
-                    <span className="text-cyan-400 font-semibold">14.99€ · Impreso en 5 horas</span>
+                    <span className="text-white font-bold block">Modelo 3D Destacado</span>
+                    <span className="text-cyan-400 font-semibold">Impresión de Máxima Calidad</span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold text-[10px]">
                     TOP VENTAS

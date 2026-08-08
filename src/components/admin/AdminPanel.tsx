@@ -9,7 +9,7 @@ import {
 import { ADMIN_PASSWORD } from '../../config/admin';
 import { Product, ProductColor, ProductPrintFile, CustomTextField, getProductSku, getMakerWorldUrl } from '../../types/product';
 import { Category } from '../../types/category';
-import { BusinessConfig } from '../../types/config';
+import { BusinessConfig, LandingPageConfig } from '../../types/config';
 import { Order, OrderStatus } from '../../types/order';
 import { AppUser } from '../../types/user';
 import { getUsers, deleteUserProfile, updateUserRole } from '../../services/userService';
@@ -30,6 +30,7 @@ interface AdminPanelProps {
   onDeleteProduct: (id: string) => void;
   onSaveConfig: (config: BusinessConfig) => void;
   onSaveCategory: (category: Category) => void;
+  onDeleteCategory: (id: string) => void;
   onResetDemoData: () => void;
 }
 
@@ -42,6 +43,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onDeleteProduct,
   onSaveConfig,
   onSaveCategory,
+  onDeleteCategory,
   onResetDemoData
 }) => {
   const { showToast } = useToast();
@@ -65,6 +67,42 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [configForm, setConfigForm] = useState<BusinessConfig>(config);
   const [newCatName, setNewCatName] = useState('');
   const [newCatDescription, setNewCatDescription] = useState('');
+
+  const updateLandingConfig = (updates: Partial<LandingPageConfig>) => {
+    const current = configForm.landingPageConfig || {
+      showHeroSection: true,
+      heroBadgeText: '🖨️ Servicio de Impresión 3D Profesional & Personalizado',
+      heroTitle: 'Impresión 3D de Alta Precisión & Diseños a Medida',
+      heroSubtitle: 'Damos vida a tus ideas con materiales biodegradables de máxima calidad. Explora nuestro catálogo o encarga piezas personalizadas con seguimiento en vivo.',
+      heroImageUrl: 'https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&w=1000&q=80',
+      heroPrimaryCtaText: 'Explorar Catálogo',
+      showHeroPrimaryCta: true,
+      heroSecondaryCtaText: 'Encargo por MakerWorld',
+      showHeroSecondaryCta: true,
+      showFeaturesSection: true,
+      featuresTitle: '¿Por qué elegir 3D Print Studio?',
+      featuresSubtitle: 'Calidad profesional, personalización total y entregas ultra rápidas.',
+      showCatalogSection: true,
+      catalogTitle: 'Explora Nuestro Catálogo 3D',
+      showMakerWorldSection: true,
+      makerWorldTitle: 'Importa tus Modelos desde MakerWorld',
+      makerWorldSubtitle: 'Pega la URL de cualquier diseño de MakerWorld y lo imprimimos para ti con la máxima precisión.',
+      makerWorldBannerUrl: 'https://images.unsplash.com/photo-1586105251261-72a756497a11?auto=format&fit=crop&w=1000&q=80',
+      showFaqsSection: true,
+      faqsTitle: 'Preguntas Frecuentes',
+      showReviewsSection: true,
+      reviewsTitle: 'Lo que dicen nuestros clientes',
+      showFooterSection: true,
+      footerTagline: 'Servicio profesional de impresión 3D a medida.'
+    };
+    setConfigForm({
+      ...configForm,
+      landingPageConfig: {
+        ...current,
+        ...updates
+      }
+    });
+  };
 
   const handleReloadMakerWorldData = async () => {
     if (!editingProduct?.makerWorldUrl || !editingProduct.makerWorldUrl.trim()) {
@@ -774,59 +812,372 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* TAB 2: CONFIG MANAGER */}
       {activeTab === 'config' && (
-        <div className="glass-card p-6 md:p-8 rounded-3xl border border-white/10 max-w-2xl">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-cyan-400" />
-            Configuración General del Negocio
-          </h2>
+        <div className="space-y-8 max-w-4xl">
+          {/* General Business Config */}
+          <div className="glass-card p-6 md:p-8 rounded-3xl border border-white/10">
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-cyan-400" />
+              Configuración General del Negocio
+            </h2>
 
-          <form onSubmit={handleSaveConfigForm} className="space-y-5">
-            <div>
-              <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Nombre de la Tienda:</label>
-              <input
-                type="text"
-                value={configForm.storeName}
-                onChange={e => setConfigForm({ ...configForm, storeName: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400 font-bold"
-              />
+            <form onSubmit={handleSaveConfigForm} className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Nombre de la Tienda:</label>
+                  <input
+                    type="text"
+                    value={configForm.storeName}
+                    onChange={e => setConfigForm({ ...configForm, storeName: e.target.value })}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Símbolo de Moneda:</label>
+                  <input
+                    type="text"
+                    value={configForm.currencySymbol || '€'}
+                    onChange={e => setConfigForm({ ...configForm, currencySymbol: e.target.value })}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
+                <label className="text-xs font-bold uppercase text-emerald-300 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-emerald-400" />
+                  Número de Teléfono para Bizum y Pedidos (con prefijo internacional):
+                </label>
+                <input
+                  type="text"
+                  value={configForm.whatsappNumber}
+                  onChange={e => setConfigForm({ ...configForm, whatsappNumber: e.target.value })}
+                  placeholder="Ej: 34600000000"
+                  className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-emerald-500/30 text-white text-sm focus:outline-none focus:border-emerald-400 font-mono font-bold"
+                />
+                <span className="text-[11px] text-emerald-300/80 block">
+                  📱 Este número se le mostrará al cliente para realizar el pago por Bizum una vez aceptado su pedido.
+                </span>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Banner Promocional Superior:</label>
+                <input
+                  type="text"
+                  value={configForm.announcementBanner || ''}
+                  onChange={e => setConfigForm({ ...configForm, announcementBanner: e.target.value })}
+                  placeholder="Ej: 🚀 Envíos gratis en pedidos mayores a 30€"
+                  className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+              >
+                <Save className="w-4 h-4" />
+                <span>Guardar Configuración General</span>
+              </button>
+            </form>
+          </div>
+
+          {/* LANDING PAGE VISUAL CUSTOMIZATION SECTION */}
+          <div className="glass-card p-6 md:p-8 rounded-3xl border border-cyan-500/30 space-y-6">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <h2 className="text-xl font-black text-white flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-cyan-400" />
+                  Personalización Visual de la Landing Page (Visibilidad y Textos/Imágenes)
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Controla independientemente la visibilidad, textos, botones e imágenes de cada sección de la página inicial.
+                </p>
+              </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
-              <label className="text-xs font-bold uppercase text-emerald-300 flex items-center gap-2">
-                <Phone className="w-4 h-4 text-emerald-400" />
-                Número de Teléfono para Bizum y Pedidos (con prefijo):
-              </label>
-              <input
-                type="text"
-                value={configForm.whatsappNumber}
-                onChange={e => setConfigForm({ ...configForm, whatsappNumber: e.target.value })}
-                placeholder="Ej: 34600000000"
-                className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-emerald-500/30 text-white text-sm focus:outline-none focus:border-emerald-400 font-mono font-bold"
-              />
-              <span className="text-[11px] text-emerald-300/80 block">
-                📱 Este número se le mostrará al cliente para realizar el pago por Bizum una vez aceptado su pedido.
-              </span>
-            </div>
+            <form onSubmit={handleSaveConfigForm} className="space-y-8">
+              {/* 1. HERO BANNER PRINCIPAL */}
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-cyan-400 flex items-center gap-2 uppercase tracking-wider">
+                    <Sparkles className="w-4 h-4" /> 1. Sección Hero Banner Principal
+                  </h3>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={configForm.landingPageConfig?.showHeroSection ?? true}
+                      onChange={e => updateLandingConfig({ showHeroSection: e.target.checked })}
+                      className="w-4 h-4 rounded text-cyan-500"
+                    />
+                    <span className="text-xs font-bold text-slate-200">Mostrar Sección Hero</span>
+                  </label>
+                </div>
 
-            <div>
-              <label className="text-xs font-bold uppercase text-slate-300 block mb-1">Banner Promocional Superior:</label>
-              <input
-                type="text"
-                value={configForm.announcementBanner || ''}
-                onChange={e => setConfigForm({ ...configForm, announcementBanner: e.target.value })}
-                placeholder="Ej: 🚀 Envíos gratis en pedidos mayores a 30€"
-                className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400"
-              />
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">Insignia / Badge Superior:</label>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.heroBadgeText || ''}
+                      onChange={e => updateLandingConfig({ heroBadgeText: e.target.value })}
+                      placeholder="🖨️ Servicio de Impresión 3D Profesional"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-cyan-300 text-xs font-bold"
+                    />
+                  </div>
 
-            <button
-              type="submit"
-              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-extrabold text-sm shadow-lg shadow-blue-500/20"
-            >
-              <Save className="w-4 h-4" />
-              <span>Guardar Configuración</span>
-            </button>
-          </form>
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">Título Principal Hero:</label>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.heroTitle || ''}
+                      onChange={e => updateLandingConfig({ heroTitle: e.target.value })}
+                      placeholder="Impresión 3D de Alta Precisión"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Subtítulo / Descripción Hero:</label>
+                  <textarea
+                    rows={2}
+                    value={configForm.landingPageConfig?.heroSubtitle || ''}
+                    onChange={e => updateLandingConfig({ heroSubtitle: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Imagen de Portada Hero (URL):</label>
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-xl border border-white/20 overflow-hidden bg-slate-950 shrink-0 flex items-center justify-center">
+                      {configForm.landingPageConfig?.heroImageUrl ? (
+                        <img src={configForm.landingPageConfig.heroImageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-slate-600" />
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.heroImageUrl || ''}
+                      onChange={e => updateLandingConfig({ heroImageUrl: e.target.value })}
+                      placeholder="https://images.unsplash.com/..."
+                      className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/10">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-300">Botón Principal (CTA 1):</label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={configForm.landingPageConfig?.showHeroPrimaryCta ?? true}
+                          onChange={e => updateLandingConfig({ showHeroPrimaryCta: e.target.checked })}
+                          className="w-3.5 h-3.5 rounded text-cyan-500"
+                        />
+                        <span className="text-[11px] text-slate-400">Ver Botón 1</span>
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.heroPrimaryCtaText || ''}
+                      onChange={e => updateLandingConfig({ heroPrimaryCtaText: e.target.value })}
+                      placeholder="Explorar Catálogo & Pedir"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-300">Botón Secundario (CTA 2):</label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={configForm.landingPageConfig?.showHeroSecondaryCta ?? true}
+                          onChange={e => updateLandingConfig({ showHeroSecondaryCta: e.target.checked })}
+                          className="w-3.5 h-3.5 rounded text-emerald-500"
+                        />
+                        <span className="text-[11px] text-slate-400">Ver Botón 2</span>
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.heroSecondaryCtaText || ''}
+                      onChange={e => updateLandingConfig({ heroSecondaryCtaText: e.target.value })}
+                      placeholder="Dudas por WhatsApp"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. SECCIÓN VENTAJAS / PROCESO */}
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-purple-400 flex items-center gap-2 uppercase tracking-wider">
+                    <Zap className="w-4 h-4" /> 2. Sección Ventajas & Por Qué Elegirnos
+                  </h3>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={configForm.landingPageConfig?.showFeaturesSection ?? true}
+                      onChange={e => updateLandingConfig({ showFeaturesSection: e.target.checked })}
+                      className="w-4 h-4 rounded text-purple-500"
+                    />
+                    <span className="text-xs font-bold text-slate-200">Mostrar Ventajas</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">Título de Sección Ventajas:</label>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.featuresTitle || ''}
+                      onChange={e => updateLandingConfig({ featuresTitle: e.target.value })}
+                      placeholder="¿Por qué elegir 3D Print Studio?"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">Subtítulo de Sección Ventajas:</label>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.featuresSubtitle || ''}
+                      onChange={e => updateLandingConfig({ featuresSubtitle: e.target.value })}
+                      placeholder="Calidad profesional y entregas ultra rápidas"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. SECCIÓN CATÁLOGO */}
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-amber-400 flex items-center gap-2 uppercase tracking-wider">
+                    <Box className="w-4 h-4" /> 3. Sección Catálogo de Productos Destacados
+                  </h3>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={configForm.landingPageConfig?.showCatalogSection ?? true}
+                      onChange={e => updateLandingConfig({ showCatalogSection: e.target.checked })}
+                      className="w-4 h-4 rounded text-amber-500"
+                    />
+                    <span className="text-xs font-bold text-slate-200">Mostrar Catálogo en Landing</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Título Sección Catálogo:</label>
+                  <input
+                    type="text"
+                    value={configForm.landingPageConfig?.catalogTitle || ''}
+                    onChange={e => updateLandingConfig({ catalogTitle: e.target.value })}
+                    placeholder="Explora Nuestro Catálogo 3D"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* 4. SECCIÓN BANNER ENCARGOS / MAKERWORLD */}
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-emerald-400 flex items-center gap-2 uppercase tracking-wider">
+                    <MessageSquare className="w-4 h-4" /> 4. Banner de Encargos Personalizados / MakerWorld
+                  </h3>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={configForm.landingPageConfig?.showMakerWorldSection ?? true}
+                      onChange={e => updateLandingConfig({ showMakerWorldSection: e.target.checked })}
+                      className="w-4 h-4 rounded text-emerald-500"
+                    />
+                    <span className="text-xs font-bold text-slate-200">Mostrar Banner Encargos</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">Título del Banner:</label>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.makerWorldTitle || ''}
+                      onChange={e => updateLandingConfig({ makerWorldTitle: e.target.value })}
+                      placeholder="Hacemos realidad tus proyectos a medida"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-300 block mb-1">Subtítulo del Banner:</label>
+                    <input
+                      type="text"
+                      value={configForm.landingPageConfig?.makerWorldSubtitle || ''}
+                      onChange={e => updateLandingConfig({ makerWorldSubtitle: e.target.value })}
+                      placeholder="Envíanos tu modelo 3D o STL para presupuesto gratis"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. FAQS & REVIEWS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-slate-300 uppercase">5. Sección FAQs</h3>
+                    <input
+                      type="checkbox"
+                      checked={configForm.landingPageConfig?.showFaqsSection ?? true}
+                      onChange={e => updateLandingConfig({ showFaqsSection: e.target.checked })}
+                      className="w-4 h-4 rounded text-cyan-500"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={configForm.landingPageConfig?.faqsTitle || ''}
+                    onChange={e => updateLandingConfig({ faqsTitle: e.target.value })}
+                    placeholder="Preguntas Frecuentes"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-bold"
+                  />
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-slate-300 uppercase">6. Sección Reseñas</h3>
+                    <input
+                      type="checkbox"
+                      checked={configForm.landingPageConfig?.showReviewsSection ?? true}
+                      onChange={e => updateLandingConfig({ showReviewsSection: e.target.checked })}
+                      className="w-4 h-4 rounded text-cyan-500"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={configForm.landingPageConfig?.reviewsTitle || ''}
+                    onChange={e => updateLandingConfig({ reviewsTitle: e.target.value })}
+                    placeholder="Lo que dicen nuestros clientes"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-white/10 flex justify-end">
+                <button
+                  type="submit"
+                  className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white font-black text-xs shadow-xl shadow-cyan-500/25 active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Guardar Personalización Visual de la Landing</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

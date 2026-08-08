@@ -34,14 +34,28 @@ export const HomePage: React.FC<HomePageProps> = ({
   onAddReview
 }) => {
   const featuredProducts = products.filter(p => p.isFeatured && p.isActive).slice(0, 4);
+  const landing = config.landingPageConfig || {
+    showHeroSection: true,
+    showFeaturesSection: true,
+    showCatalogSection: true,
+    showMakerWorldSection: true,
+    showFaqsSection: true,
+    showReviewsSection: true,
+    catalogTitle: 'Productos Destacados',
+    makerWorldTitle: 'Hacemos realidad tus proyectos a medida en 3D',
+    makerWorldSubtitle: 'Envíanos la foto, plano o modelo 3D que quieras imprimir y te damos presupuesto instantáneo sin compromiso.'
+  };
 
   return (
     <div className="space-y-12">
       {/* 1. Hero Section */}
-      <HeroSection
-        onExploreCatalog={() => onNavigate('catalog')}
-        onOpenWhatsApp={() => window.open(buildWhatsAppGeneralUrl(config.whatsappNumber), '_blank')}
-      />
+      {landing.showHeroSection !== false && (
+        <HeroSection
+          config={config}
+          onExploreCatalog={() => onNavigate('catalog')}
+          onOpenWhatsApp={() => window.open(buildWhatsAppGeneralUrl(config.whatsappNumber), '_blank')}
+        />
+      )}
 
       {/* 2. Categorías */}
       <CategoriesSection
@@ -50,7 +64,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       />
 
       {/* 3. Productos Destacados */}
-      {featuredProducts.length > 0 && (
+      {landing.showCatalogSection !== false && featuredProducts.length > 0 && (
         <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
             <div>
@@ -58,7 +72,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 Impresiones Populares
               </span>
               <h2 className="text-3xl font-extrabold text-white">
-                Productos <span className="text-gradient">Destacados</span>
+                {landing.catalogTitle || 'Productos Destacados'}
               </h2>
             </div>
 
@@ -84,41 +98,47 @@ export const HomePage: React.FC<HomePageProps> = ({
         </section>
       )}
 
-      {/* 4. Proceso de Compra */}
-      <ProcessSection />
+      {/* 4. Proceso de Compra / Ventajas */}
+      {landing.showFeaturesSection !== false && <ProcessSection />}
 
-      {/* 5. Banner CTA Personalizado */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="relative glass-card rounded-3xl p-8 md:p-12 overflow-hidden border border-cyan-500/30 flex flex-col md:flex-row items-center justify-between gap-8 bg-gradient-to-r from-blue-900/30 via-slate-900 to-purple-900/30">
-          <div className="space-y-3 text-center md:text-left">
-            <span className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold border border-cyan-500/30 inline-block">
-              ¿Tienes un archivo STL o idea propia?
-            </span>
-            <h3 className="text-2xl md:text-3xl font-black text-white">
-              Hacemos realidad tus proyectos a medida en 3D
-            </h3>
-            <p className="text-sm text-slate-300 max-w-xl">
-              Envíanos la foto, plano o modelo 3D que quieras imprimir y te damos presupuesto instantáneo sin compromiso.
-            </p>
+      {/* 5. Banner CTA Personalizado / MakerWorld */}
+      {landing.showMakerWorldSection !== false && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="relative glass-card rounded-3xl p-8 md:p-12 overflow-hidden border border-cyan-500/30 flex flex-col md:flex-row items-center justify-between gap-8 bg-gradient-to-r from-blue-900/30 via-slate-900 to-purple-900/30">
+            <div className="space-y-3 text-center md:text-left">
+              <span className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold border border-cyan-500/30 inline-block">
+                ¿Tienes un archivo STL o idea propia?
+              </span>
+              <h3 className="text-2xl md:text-3xl font-black text-white">
+                {landing.makerWorldTitle || 'Hacemos realidad tus proyectos a medida en 3D'}
+              </h3>
+              <p className="text-sm text-slate-300 max-w-xl">
+                {landing.makerWorldSubtitle || 'Envíanos la foto, plano o modelo 3D que quieras imprimir y te damos presupuesto instantáneo sin compromiso.'}
+              </p>
+            </div>
+
+            <a
+              href={buildWhatsAppGeneralUrl(config.whatsappNumber, '¡Hola! Tengo una idea / archivo STL propio para imprimir en 3D.')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 text-white font-black text-sm shadow-xl shadow-emerald-500/25 hover:scale-105 active:scale-95 transition-all shrink-0"
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span>Consultar Proyecto a Medida</span>
+            </a>
           </div>
-
-          <a
-            href={buildWhatsAppGeneralUrl(config.whatsappNumber, '¡Hola! Tengo una idea / archivo STL propio para imprimir en 3D.')}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 text-white font-black text-sm shadow-xl shadow-emerald-500/25 hover:scale-105 active:scale-95 transition-all shrink-0"
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span>Consultar Proyecto a Medida</span>
-          </a>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 6. Opiniones */}
-      <ReviewsSection reviews={reviews} onAddReview={onAddReview} />
+      {landing.showReviewsSection !== false && (
+        <ReviewsSection reviews={reviews} onAddReview={onAddReview} />
+      )}
 
       {/* 7. Preguntas Frecuentes */}
-      <FAQSection faqs={faqs} />
+      {landing.showFaqsSection !== false && (
+        <FAQSection faqs={faqs} />
+      )}
     </div>
   );
 };
