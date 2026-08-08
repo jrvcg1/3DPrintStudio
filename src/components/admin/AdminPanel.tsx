@@ -1111,13 +1111,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <div>
                   <label className="text-xs font-bold text-slate-300 block mb-1">URL de la Foto Principal:</label>
-                  <input
-                    type="text"
-                    value={editingProduct.images ? editingProduct.images[0] : ''}
-                    onChange={e => setEditingProduct({ ...editingProduct, images: [e.target.value] })}
-                    placeholder="https://..."
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-cyan-400"
-                  />
+                  <div className="flex items-center gap-3">
+                    {/* Previsualización gráfica de la foto */}
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border border-white/20 overflow-hidden bg-slate-900 shrink-0 flex items-center justify-center shadow-lg group">
+                      {editingProduct.images && editingProduct.images[0] ? (
+                        <img
+                          src={editingProduct.images[0]}
+                          alt="Previsualización de producto"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-slate-600" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1">
+                      <input
+                        type="text"
+                        value={editingProduct.images ? editingProduct.images[0] : ''}
+                        onChange={e => setEditingProduct({ ...editingProduct, images: [e.target.value] })}
+                        placeholder="https://..."
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-cyan-400"
+                      />
+                      <span className="text-[10px] text-slate-400 block font-sans">
+                        Previsualización en tiempo real de la portada del producto.
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <div>
