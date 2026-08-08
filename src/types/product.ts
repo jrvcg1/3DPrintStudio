@@ -3,6 +3,21 @@ export interface ProductColor {
   hex: string;
 }
 
+export interface ProductPrintFile {
+  id: string;
+  name: string;
+  url: string;
+  format?: string;
+}
+
+export interface CustomTextField {
+  id: string;
+  label: string;
+  placeholder?: string;
+  maxLength?: number;
+  required?: boolean;
+}
+
 export interface Product {
   id: string;
   sku?: string; // ID único amigable para pedidos (ej. "REF-3D-01", "MW-441051")
@@ -23,6 +38,8 @@ export interface Product {
   popularity: number; // Contador de visitas o pedidos para ordenamiento
   dimensions?: string; // Ej: "8 x 5 x 4 cm"
   makerWorldUrl?: string; // URL original de MakerWorld
+  printFiles?: ProductPrintFile[]; // Archivos vinculados al modelo para la impresión
+  customTextFields?: CustomTextField[]; // Lista de campos de texto personalizable
   createdAt: string;
 }
 

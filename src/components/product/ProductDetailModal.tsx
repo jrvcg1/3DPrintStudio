@@ -263,17 +263,40 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                   {/* Custom Text input */}
                   {product.isCustomizable && (
-                    <div>
-                      <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                        Texto grabado personalizado:
-                      </label>
-                      <input
-                        type="text"
-                        value={customText}
-                        onChange={e => setCustomText(e.target.value)}
-                        placeholder="Ej: MARÍA, iniciales o grabado..."
-                        className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-bold uppercase"
-                      />
+                    <div className="space-y-2">
+                      {product.customTextFields && product.customTextFields.length > 0 ? (
+                        product.customTextFields.map((field) => (
+                          <div key={field.id} className="space-y-1">
+                            <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                              <span>{field.label}:</span>
+                              {field.maxLength && (
+                                <span className="text-[10px] text-slate-400 font-mono">Máx {field.maxLength} car.</span>
+                              )}
+                            </label>
+                            <input
+                              type="text"
+                              value={customText}
+                              onChange={e => setCustomText(e.target.value)}
+                              placeholder={field.placeholder || `Escribe ${field.label.toLowerCase()}...`}
+                              maxLength={field.maxLength}
+                              className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-bold uppercase"
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div>
+                          <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                            Texto grabado personalizado:
+                          </label>
+                          <input
+                            type="text"
+                            value={customText}
+                            onChange={e => setCustomText(e.target.value)}
+                            placeholder="Ej: MARÍA, iniciales o grabado..."
+                            className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-bold uppercase"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

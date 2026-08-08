@@ -3,16 +3,18 @@ import {
   Plus, Edit, Trash2, ShieldCheck, Box, RefreshCw, Download, Settings,
   Eye, EyeOff, Save, CheckCircle2, AlertTriangle, Layers, MessageSquare,
   Sparkles, Image as ImageIcon, Phone, Users, Mail, Calendar, Clock, UserX, Crown, LogOut,
-  ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter, MapPin, Globe
+  ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter, MapPin, Globe,
+  FileText, Palette, Sliders, X
 } from 'lucide-react';
 import { ADMIN_PASSWORD } from '../../config/admin';
-import { Product, ProductColor, getProductSku, getMakerWorldUrl } from '../../types/product';
+import { Product, ProductColor, ProductPrintFile, CustomTextField, getProductSku, getMakerWorldUrl } from '../../types/product';
 import { Category } from '../../types/category';
 import { BusinessConfig } from '../../types/config';
 import { Order, OrderStatus } from '../../types/order';
 import { AppUser } from '../../types/user';
 import { getUsers, deleteUserProfile, updateUserRole } from '../../services/userService';
 import { subscribeAllOrders, updateOrderStatus } from '../../services/orderService';
+import { fetchMakerWorldProduct } from '../../services/makerworldService';
 import { useToast } from '../../context/ToastContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { MakerWorldImportModal } from './MakerWorldImportModal';
@@ -52,9 +54,46 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [browserUrl, setBrowserUrl] = useState<string | null>(null);
   const [browserTitle, setBrowserTitle] = useState<string | undefined>(undefined);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
+  const [reloadingMw, setReloadingMw] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [newFileUrl, setNewFileUrl] = useState('');
+  const [newColorName, setNewColorName] = useState('');
+  const [newColorHex, setNewColorHex] = useState('#3B82F6');
+  const [newParamLabel, setNewParamLabel] = useState('');
+  const [newParamMaxLen, setNewParamMaxLen] = useState(20);
+
   const [configForm, setConfigForm] = useState<BusinessConfig>(config);
   const [newCatName, setNewCatName] = useState('');
   const [newCatDescription, setNewCatDescription] = useState('');
+
+  const handleReloadMakerWorldData = async () => {
+    if (!editingProduct?.makerWorldUrl || !editingProduct.makerWorldUrl.trim()) {
+      showToast('Por favor introduce una URL válida de MakerWorld', 'error');
+      return;
+    }
+    setReloadingMw(true);
+    try {
+      const data = await fetchMakerWorldProduct(editingProduct.makerWorldUrl.trim(), categories);
+      setEditingProduct(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          name: data.title || prev.name,
+          description: data.description || prev.description,
+          longDescription: data.longDescription || prev.longDescription,
+          images: data.images && data.images.length > 0 ? data.images : prev.images,
+          printTime: data.printTime || prev.printTime,
+          material: data.material || prev.material,
+          category: data.suggestedCategorySlug || prev.category
+        };
+      });
+      showToast('¡Información de MakerWorld actualizada con éxito!', 'success');
+    } catch (e: any) {
+      showToast(e.message || 'Error al consultar MakerWorld', 'error');
+    } finally {
+      setReloadingMw(false);
+    }
+  };
 
   // Real-time Orders & Chat state
   const [liveOrders, setLiveOrders] = useState<Order[]>(initialOrders || []);
@@ -1066,13 +1105,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               <div>
                 <label className="text-xs font-bold text-slate-300 block mb-1">Enlace de MakerWorld (Opcional):</label>
-                <input
-                  type="text"
-                  value={editingProduct.makerWorldUrl || ''}
-                  onChange={e => setEditingProduct({ ...editingProduct, makerWorldUrl: e.target.value })}
-                  placeholder="https://makerworld.com/en/models/..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-cyan-300 text-xs font-mono focus:outline-none focus:border-cyan-400"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editingProduct.makerWorldUrl || ''}
+                    onChange={e => setEditingProduct({ ...editingProduct, makerWorldUrl: e.target.value })}
+                    placeholder="https://makerworld.com/en/models/..."
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-cyan-300 text-xs font-mono focus:outline-none focus:border-cyan-400"
+                  />
+                  {editingProduct.makerWorldUrl && (
+                    <button
+                      type="button"
+                      disabled={reloadingMw}
+                      onClick={handleReloadMakerWorldData}
+                      className="px-3 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 active:scale-95 disabled:opacity-50"
+                      title="Volver a extraer y actualizar información desde MakerWorld"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${reloadingMw ? 'animate-spin' : ''}`} />
+                      <span>Actualizar Info</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1083,6 +1136,252 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })}
                   className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-cyan-400"
                 />
+              </div>
+
+              {/* ARCHIVOS DE IMPRESIÓN VINCULADOS */}
+              <div className="pt-3 border-t border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-cyan-400 flex items-center gap-1.5 uppercase tracking-wider">
+                    <FileText className="w-4 h-4 text-cyan-400" />
+                    Archivos del Modelo para Impresión 3D (STL, 3MF, STEP, GCODE)
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {editingProduct.printFiles?.length || 0} archivos
+                  </span>
+                </div>
+
+                {editingProduct.printFiles && editingProduct.printFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {editingProduct.printFiles.map((file, idx) => (
+                      <div key={file.id || idx} className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono font-bold text-[10px] uppercase">
+                            {file.format || '3D'}
+                          </span>
+                          <span className="font-bold text-slate-200 truncate">{file.name}</span>
+                          <span className="text-[10px] text-slate-500 truncate font-mono">({file.url})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = editingProduct.printFiles?.filter((_, i) => i !== idx);
+                            setEditingProduct({ ...editingProduct, printFiles: updated });
+                          }}
+                          className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20 transition-colors"
+                          title="Eliminar archivo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={newFileName}
+                    onChange={e => setNewFileName(e.target.value)}
+                    placeholder="Nombre (ej: Pieza_Principal.stl)"
+                    className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs"
+                  />
+                  <input
+                    type="text"
+                    value={newFileUrl}
+                    onChange={e => setNewFileUrl(e.target.value)}
+                    placeholder="URL / Ruta de descarga (https://...)"
+                    className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newFileName.trim() || !newFileUrl.trim()) return;
+                      const ext = newFileName.split('.').pop()?.toUpperCase() || '3D';
+                      const newFileObj: ProductPrintFile = {
+                        id: 'file-' + Date.now(),
+                        name: newFileName.trim(),
+                        url: newFileUrl.trim(),
+                        format: ext
+                      };
+                      const current = editingProduct.printFiles || [];
+                      setEditingProduct({ ...editingProduct, printFiles: [...current, newFileObj] });
+                      setNewFileName('');
+                      setNewFileUrl('');
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/40 text-xs font-bold shrink-0 flex items-center justify-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Añadir Archivo
+                  </button>
+                </div>
+              </div>
+
+              {/* PALETA DE COLORES EDITABLE */}
+              <div className="pt-3 border-t border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-purple-400 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Palette className="w-4 h-4 text-purple-400" />
+                    Colores Disponibles para Seleccionar en Pedidos
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {editingProduct.colors?.length || 0} colores
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {editingProduct.colors?.map((c, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs font-bold text-white shadow-sm">
+                      <span className="w-3.5 h-3.5 rounded-full border border-white/30" style={{ backgroundColor: c.hex }} />
+                      <span>{c.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = editingProduct.colors?.filter((_, i) => i !== idx);
+                          setEditingProduct({ ...editingProduct, colors: updated });
+                        }}
+                        className="text-slate-400 hover:text-rose-400 ml-1"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Paleta rápida de presets y formulario personalizado */}
+                <div className="space-y-2">
+                  <span className="text-[11px] text-slate-400 block font-semibold">Añadir de paleta predeterminada:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { name: 'Negro Mate', hex: '#111827' },
+                      { name: 'Blanco Nieve', hex: '#FFFFFF' },
+                      { name: 'Rojo Pasión', hex: '#EF4444' },
+                      { name: 'Azul Neón', hex: '#3B82F6' },
+                      { name: 'Verde Esmeralda', hex: '#10B981' },
+                      { name: 'Amarillo Sol', hex: '#F59E0B' },
+                      { name: 'Morado Galaxia', hex: '#8B5CF6' },
+                      { name: 'Dorado Seda', hex: '#D97706' },
+                      { name: 'Plata Metalizado', hex: '#9CA3AF' }
+                    ].map(pColor => (
+                      <button
+                        key={pColor.name}
+                        type="button"
+                        onClick={() => {
+                          const current = editingProduct.colors || [];
+                          if (!current.some(c => c.name === pColor.name)) {
+                            setEditingProduct({ ...editingProduct, colors: [...current, pColor] });
+                          }
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-slate-300 border border-white/10"
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pColor.hex }} />
+                        <span>+ {pColor.name}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={newColorName}
+                      onChange={e => setNewColorName(e.target.value)}
+                      placeholder="Nombre (ej: Naranja Fosforito)"
+                      className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs"
+                    />
+                    <input
+                      type="color"
+                      value={newColorHex}
+                      onChange={e => setNewColorHex(e.target.value)}
+                      className="w-10 h-9 rounded-xl bg-white/5 border border-white/10 cursor-pointer p-0.5"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newColorName.trim()) return;
+                        const current = editingProduct.colors || [];
+                        setEditingProduct({ ...editingProduct, colors: [...current, { name: newColorName.trim(), hex: newColorHex }] });
+                        setNewColorName('');
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/40 text-xs font-bold shrink-0 flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Añadir Color
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* CAMPOS DE TEXTO PERSONALIZABLE CONFIGURABLES */}
+              <div className="pt-3 border-t border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-400 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Sliders className="w-4 h-4 text-amber-400" />
+                    Parámetros de Texto Personalizable para el Cliente
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {editingProduct.customTextFields?.length || 0} campos
+                  </span>
+                </div>
+
+                {editingProduct.customTextFields && editingProduct.customTextFields.length > 0 && (
+                  <div className="space-y-2">
+                    {editingProduct.customTextFields.map((field, idx) => (
+                      <div key={field.id || idx} className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="font-bold text-amber-300 truncate">{field.label}</span>
+                          {field.maxLength && (
+                            <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded font-mono">
+                              Máx: {field.maxLength} car.
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = editingProduct.customTextFields?.filter((_, i) => i !== idx);
+                            setEditingProduct({ ...editingProduct, customTextFields: updated });
+                          }}
+                          className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/20 transition-colors"
+                          title="Eliminar campo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={newParamLabel}
+                    onChange={e => setNewParamLabel(e.target.value)}
+                    placeholder="Pregunta / Etiqueta (ej: Nombre para el llavero)"
+                    className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs"
+                  />
+                  <input
+                    type="number"
+                    value={newParamMaxLen}
+                    onChange={e => setNewParamMaxLen(parseInt(e.target.value) || 20)}
+                    placeholder="Máx car."
+                    className="w-24 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newParamLabel.trim()) return;
+                      const newField: CustomTextField = {
+                        id: 'tf-' + Date.now(),
+                        label: newParamLabel.trim(),
+                        maxLength: newParamMaxLen,
+                        required: true
+                      };
+                      const current = editingProduct.customTextFields || [];
+                      setEditingProduct({ ...editingProduct, customTextFields: [...current, newField] });
+                      setNewParamLabel('');
+                    }}
+                    className="px-3 py-2 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-bold shrink-0 flex items-center justify-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Añadir Campo
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-6 pt-2">
