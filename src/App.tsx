@@ -40,7 +40,8 @@ import {
   addReview,
   resetToMockData,
   subscribeProducts,
-  subscribeCategories
+  subscribeCategories,
+  subscribeBusinessConfig
 } from './services/firebaseService';
 
 export const AppContent: React.FC = () => {
@@ -95,9 +96,14 @@ export const AppContent: React.FC = () => {
       setCategories(liveCats);
     });
 
+    const unsubConfig = subscribeBusinessConfig((liveConfig) => {
+      if (liveConfig) setConfig(liveConfig);
+    });
+
     return () => {
       unsubProds();
       unsubCats();
+      unsubConfig();
     };
   }, []);
 

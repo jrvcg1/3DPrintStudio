@@ -256,6 +256,22 @@ export const saveBusinessConfig = async (config: BusinessConfig): Promise<void> 
   setLocalData(STORAGE_KEYS.CONFIG, config);
 };
 
+export const subscribeBusinessConfig = (callback: (config: BusinessConfig) => void): (() => void) => {
+  if (isFirebaseConfigured && db) {
+    const docRef = doc(db, 'config', 'general');
+    const unsubscribe = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        callback(snap.data() as BusinessConfig);
+      }
+    }, (err) => {
+      console.warn('Error subscribing to business config:', err);
+    });
+    return unsubscribe;
+  }
+  callback(getLocalData<BusinessConfig>(STORAGE_KEYS.CONFIG, INITIAL_CONFIG));
+  return () => {};
+};
+
 /* ==========================================================================
    FAQS & REVIEWS SERVICE
    ========================================================================== */

@@ -4,7 +4,7 @@ import {
   Eye, EyeOff, Save, CheckCircle2, AlertTriangle, Layers, MessageSquare,
   Sparkles, Image as ImageIcon, Phone, Users, Mail, Calendar, Clock, UserX, Crown, LogOut,
   ShoppingBag, Check, CreditCard, Package, Truck, ArrowRight, Filter, MapPin, Globe,
-  FileText, Palette, Sliders, X
+  FileText, Palette, Sliders, X, Zap
 } from 'lucide-react';
 import { ADMIN_PASSWORD } from '../../config/admin';
 import { Product, ProductColor, ProductPrintFile, CustomTextField, getProductSku, getMakerWorldUrl } from '../../types/product';
