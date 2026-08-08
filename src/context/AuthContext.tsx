@@ -97,12 +97,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      setPersistence(auth, browserLocalPersistence).catch(() => {});
-    } catch {
-      // fallback
-    }
-
-    try {
       getRedirectResult(auth)
         .then(async (result) => {
           if (result?.user) {
@@ -117,10 +111,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('onAuthStateChanged event:', firebaseUser ? firebaseUser.email : 'null');
       setUser(firebaseUser);
       if (firebaseUser) {
-        const profile = await syncUserToFirestore(firebaseUser);
-        setAppUser(profile);
+        try {
+          const profile = await syncUserToFirestore(firebaseUser);
+          setAppUser(profile);
+        } catch (e) {
+          console.warn('Profile sync error:', e);
+        }
       } else {
         setAppUser(null);
       }
