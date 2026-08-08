@@ -145,7 +145,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      await signInWithPopup(auth, provider);
+      const res = await signInWithPopup(auth, provider);
+      if (res?.user) {
+        setUser(res.user);
+        const profile = await syncUserToFirestore(res.user);
+        setAppUser(profile);
+      }
     } catch (err: any) {
       console.warn('Google Sign-In popup error, attempting redirect fallback:', err?.code, err?.message);
       if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
